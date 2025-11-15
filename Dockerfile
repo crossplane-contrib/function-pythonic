@@ -1,9 +1,10 @@
-FROM python:3.13-slim-trixie AS image
+FROM python:3.14-slim-trixie AS image
 
 COPY dist/*.whl /root
 WORKDIR /
 RUN \
   set -eux && \
+  pip install --upgrade pip setuptools && \
   pip install --root-user-action ignore --no-build-isolation $(echo /root/*.whl)[packages,pip-install] && \
   rm -rf /root/*.whl /root/.cache && \
   groupadd --gid 2000 pythonic && \
