@@ -30,7 +30,7 @@ def message_merge(message, values):
                 if isinstance(current, Struct):
                     map_merge(current, value)
                 else:
-                    if descriptor.label == descriptor.LABEL_REPEATED:
+                    if descriptor.is_repeated:
                         if descriptor.message_type.GetOptions().map_entry:
                             message_map_merge(descriptor, current, value)
                         else:
@@ -42,7 +42,7 @@ def message_merge(message, values):
                     list_merge(current, value)
                 else:
                     descriptor = message.DESCRIPTOR.fields_by_name.get(field)
-                    if descriptor.label == descriptor.LABEL_REPEATED:
+                    if descriptor.is_repeated:
                         if descriptor.message_type.GetOptions().map_entry:
                             message_map_merge(descriptor, current, value)
                         else:
@@ -115,7 +115,7 @@ def message_dict(message):
                 value = map_dict(value)
             elif field.message_type.name == 'ListValue':
                 value = list_list(value)
-            elif field.label == field.LABEL_REPEATED:
+            elif field.is_repeated:
                 if field.message_type.GetOptions().map_entry:
                     value = message_map_dict(field, value)
                 else:

@@ -81,7 +81,7 @@ class Message:
             value = getattr(self._message, key)
         if value is _Unknown and field.has_default_value:
             value = field.default_value
-        if field.label == field.LABEL_REPEATED:
+        if field.is_repeated:
             if field.type == field.TYPE_MESSAGE and field.message_type.GetOptions().map_entry:
                 value = MapMessage(self, key, field.message_type.fields_by_name['value'], value, self._readOnly)
             else:

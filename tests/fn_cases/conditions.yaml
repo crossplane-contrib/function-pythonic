@@ -24,6 +24,11 @@ request:
     composite: |
       class ConditionsComposite(BaseComposite):
         def compose(self):
+          assert bool(self.conditions)
+          assert len(self.conditions) == 1
+          for condition in self.conditions:
+            assert condition.type == 'Ready'
+
           self.status.compositeCondition = self.conditions.Ready
           self.status.compositeNotFound = self.conditions.Other
           self.status.composedCondition = self.resources.project.conditions.Ready
@@ -35,6 +40,10 @@ request:
           self.conditions.TestCondition('InstallFail', 'failed to install', False)
           self.conditions.ConditionTrue('TrueCondition', 'we are true', True, True)
           self.conditions.DatabaseReady('Ready', 'Database is ready', True)
+
+          assert bool(self.conditions)
+          assert len(self.conditions) == 4
+          assert len(list(self.conditions)) == 4
 
 response:
   desired:
