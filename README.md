@@ -21,7 +21,7 @@ spec:
     kind: XR
   mode: Pipeline
   pipeline:
-  - step: 
+  - step:
     functionRef:
       name: function-pythonic
     input:
@@ -378,7 +378,7 @@ spec:
 ```
 #### functions.yaml
 ```yaml
-apiVersion: pkg.crossplane.io/v1beta1
+apiVersion: pkg.crossplane.io/v1
 kind: Function
 metadata:
   name: function-pythonic
