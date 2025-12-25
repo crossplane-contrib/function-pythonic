@@ -1,10 +1,10 @@
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
-  name: eksclusters.pythonic.fortra.com
+  name: eksclusters.pythonic.crossplane.io
 spec:
   compositeTypeRef:
-    apiVersion: pythonic.fortra.com/v1alpha1
+    apiVersion: pythonic.crossplane.io/v1alpha1
     kind: EksCluster
   mode: Pipeline
   pipeline:
@@ -13,7 +13,7 @@ spec:
     functionRef:
       name: function-pythonic
     input:
-      apiVersion: pythonic.fn.fortra.com/v1alpha1
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
       kind: Composite
       composite: |
         class Composite(BaseComposite):

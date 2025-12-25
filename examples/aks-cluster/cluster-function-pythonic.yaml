@@ -3,7 +3,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.1.5
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.2.0
   runtimeConfigRef:
     name: function-pythonic
 ---

@@ -7,4 +7,4 @@ spec:
   region: us-east-1
   cidr: 10.0.0.0/16
   tags:
-    'fortra:cloudops': 'owned'
+    'crossplane-contrib:cloudops': 'owned'

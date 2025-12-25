@@ -12,13 +12,13 @@ spec:
     functionRef:
       name: function-pythonic
     input:
-      apiVersion: pythonic.fn.fortra.com/v1alpha1
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
       kind: Composite
       composite:  aks.resourcegroup.ResourceGroupComposite
   - step: create-aks-cluster
     functionRef:
       name: function-pythonic
     input:
-      apiVersion: aks.pythonic.fn.fortra.com/v1alpha1
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
       kind: Composite
       composite: aks.kubernetescluster.KubernetesClusterComposite

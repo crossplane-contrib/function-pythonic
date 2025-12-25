@@ -26,9 +26,9 @@ packages = ["kopf==1.39.1"]
 pip-install = ["pip==25.3"]
 
 [project.urls]
-Documentation = "https://github.com/fortra/function-pythonic#readme"
-Issues = "https://github.com/fortra/function-pythonic/issues"
-Source = "https://github.com/fortra/function-pythonic"
+Documentation = "https://github.com/crossplane-contrib/function-pythonic#readme"
+Issues = "https://github.com/crossplane-contrib/function-pythonic/issues"
+Source = "https://github.com/crossplane-contrib/function-pythonic"
 
 [project.scripts]
 function-pythonic = "crossplane.pythonic.main:main"
@@ -38,7 +38,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
-path = "crossplane/pythonic/__version__.py"
+path = "crossplane/pythonic/__about__.py"
 validate-bump = false
 
 [tool.hatch.build.targets.wheel]
@@ -57,10 +57,10 @@ path = ".venv-default"
 dependencies = ["ipython==9.1.0"]
 packages = ["crossplane"]
 [tool.hatch.envs.default.scripts]
-production = "python -m crossplane.pythonic.main --insecure"
-development = "python -m crossplane.pythonic.main --insecure --debug --render-unknowns"
-#development = "python -m crossplane.pythonic.main --insecure --debug"
-packages = "python -m crossplane.pythonic.main --insecure --debug --render-unknowns --packages --packages-secrets"
+production = "python -m crossplane.pythonic.main grpc --insecure"
+development = "python -m crossplane.pythonic.main grpc --insecure --debug --render-unknowns"
+#development = "python -m crossplane.pythonic.main grpc --insecure --debug"
+packages = "python -m crossplane.pythonic.main grpc --insecure --debug --render-unknowns --packages --packages-secrets"
 
 [tool.hatch.envs.lint]
 type = "virtual"
@@ -82,7 +82,7 @@ dependencies = [
 ]
 packages = ["crossplane"]
 [tool.hatch.envs.test.scripts]
-all = "python -m pytest tests/ -x --verbose --verbose --cov --cov-report=term --cov-report=html:reports"
+all = "python -m pytest tests -x --verbose --verbose --cov --cov-report=term --cov-report=html:reports"
 protobuf = "python -m pytest tests/test_protobuf_*.py -x --verbose --verbose --cov --cov-report=term --cov-report=html:reports"
 ci = "python -m pytest tests --verbose --verbose --junitxml=reports/pytest-junit.xml --cov --cov-report=term --cov-report=xml:reports/pytest-coverage.xml"
 

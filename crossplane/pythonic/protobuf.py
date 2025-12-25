@@ -55,7 +55,6 @@ def B64Decode(string):
         string = str(string)
     return base64.b64decode(string.encode('utf-8')).decode('utf-8')
 
-B64Decode = lambda s: base64.b64decode(s.encode('utf-8')).decode('utf-8')
 
 class Message:
     def __init__(self, parent, key, descriptor, message=_Unknown, readOnly=False):
@@ -450,6 +449,10 @@ class RepeatedMessage:
             raise ValueError(f"{self._readOnly} is read only")
         if self._messages is _Unknown:
             self.__dict__['_messages'] = self._parent._create_child(self._key)
+        if key == append:
+            key = len(self._messages)
+        elif key < 0:
+            key = len(self._messages) + key
         while key >= len(self._messages):
             self._messages.add()
         return self._messages[key]
@@ -1050,6 +1053,10 @@ class Value:
                 values = self._value.list_value.values
             else:
                 values = self._value.values
+            if key == append:
+                key = len(values)
+            elif key < 0:
+                key = len(values) + key
             while key >= len(values):
                 values.add()
             values[key].Clear()

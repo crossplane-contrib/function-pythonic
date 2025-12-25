@@ -25,7 +25,7 @@ spec:
     functionRef:
       name: function-pythonic
     input:
-      apiVersion: pythonic.fn.fortra.com/v1alpha1
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
       kind: Composite
       composite: |
         class VpcComposite(BaseComposite):
@@ -57,7 +57,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.1.5
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.2.0
 ```
 ## Composed Resource Dependencies
 
@@ -203,7 +203,7 @@ The BaseComposite class provides the following fields for manipulating the Compo
 | self.spec | Map | The composite observed spec |
 | self.status | Map | The composite desired and observed status, read from observed if not in desired |
 | self.conditions | Conditions | The composite desired and observed conditions, read from observed if not in desired |
-| self.events | Events | Returned events against the Composite and optionally on the Claim |
+| self.results | Results | Returned results applied to the Composite and optionally on the Claim |
 | self.connection | Connection | The composite desired and observed connection detials, read from observed if not in desired |
 | self.ready | Boolean | The composite desired ready state |
 
@@ -302,19 +302,19 @@ The fields are read only for `Resource.conditions` and `RequiredResource.conditi
 | Condition.lastTransitionTime | Timestamp | Last transition time, read only |
 | Condition.claim | Boolean | Also apply the condition the claim |
 
-### Events
+### Results
 
-The `BaseComposite.events` field is a list of events to apply to the Composite and
+The `BaseComposite.results` field is a list of results to apply to the Composite and
 optionally to the Claim.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| Event.info | Boolean | Normal informational event |
-| Event.warning | Boolean | Warning level event |
-| Event.fatal | Boolean | Fatal events also terminate composing the Composite |
-| Event.reason | String | PascalCase, machine-readable reason for this event |
-| Event.message | String | Human-readable details about the event |
-| Event.claim | Boolean | Also apply the event to the claim |
+| Result.info | Boolean | Normal informational result |
+| Result.warning | Boolean | Warning level result |
+| Result.fatal | Boolean | Fatal results also terminate composing the Composite |
+| Result.reason | String | PascalCase, machine-readable reason for this result |
+| Result.message | String | Human-readable details about the result |
+| Result.claim | Boolean | Also apply the result to the claim |
 
 ## Single use Composites
 
@@ -324,7 +324,7 @@ just to run that Composition once in a single use or initialize task?
 function-pythonic installs a `Composite` CompositeResourceDefinition that enables
 creating such tasks using a single Composite resource:
 ```yaml
-apiVersion: pythonic.fortra.com/v1alpha1
+apiVersion: pythonic.fn.crossplane.io/v1alpha1
 kind: Composite
 metadata:
   name: composite-example
@@ -337,16 +337,62 @@ spec:
 
 ## Quick Start Development
 
-The following example demonstrates how to locally render function-python
-compositions. First, install the `crossplane-function-pythonic` python
-package into the python environment:
+function-pythonic includes a pure python implementation of the `crossplane render ...`
+command, which can be used to render Compositions that only use function-pythonic. This
+makes it very easy to test and debug using your IDE of choice. It is also blindingly
+fast compared to `crossplane render`. To use, install the `crossplane-function-pythonic`
+python package into the python environment.
 ```shell
 $ pip install crossplane-function-pythonic
 ```
-Next, create the following files:
+Then to render function-pythonic Compositions, use the `function-pythonic render ...`
+command.
+```shell
+$ function-pythonic render --help
+usage: Crossplane Function Pythonic render [-h] [--debug] [--log-name-width WIDTH] [--python-path DIRECTORY] [--render-unknowns]
+                                           [--allow-oversize-protos] [--context-files KEY=PATH] [--context-values KEY=VALUE]
+                                           [--observed-resources PATH] [--extra-resources PATH] [--required-resources PATH]
+                                           [--function-credentials PATH] [--include-full-xr] [--include-function-results] [--include-context]
+                                           PATH [PATH/CLASS]
+
+positional arguments:
+  PATH                  A YAML file containing the Composite resource to render.
+  PATH/CLASS            A YAML file containing the Composition resource or the complete path of a function=-pythonic BaseComposite subclass.
+
+options:
+  -h, --help            show this help message and exit
+  --debug, -d           Emit debug logs.
+  --log-name-width WIDTH
+                        Width of the logger name in the log output, default 40.
+  --python-path DIRECTORY
+                        Filing system directories to add to the python path.
+  --render-unknowns, -u
+                        Render resources with unknowns, useful during local development.
+  --allow-oversize-protos
+                        Allow oversized protobuf messages
+  --context-files KEY=PATH
+                        Context key-value pairs to pass to the Function pipeline. Values must be files containing YAML/JSON.
+  --context-values KEY=VALUE
+                        Context key-value pairs to pass to the Function pipeline. Values must be YAML/JSON. Keys take precedence over --context-files.
+  --observed-resources, -o PATH
+                        A YAML file or directory of YAML files specifying the observed state of composed resources.
+  --extra-resources PATH
+                        A YAML file or directory of YAML files specifying required resources (deprecated, use --required-resources).
+  --required-resources, -e PATH
+                        A YAML file or directory of YAML files specifying required resources to pass to the Function pipeline.
+  --function-credentials PATH
+                        A YAML file or directory of YAML files specifying credentials to use for Functions to render the XR.
+  --include-full-xr, -x
+                        Include a direct copy of the input XR's spedc and metadata fields in the rendered output.
+  --include-function-results, -r
+                        Include informational and warning messages from Functions in the rendered output as resources of kind: Result..
+  --include-context, -c
+                        Include the context in the rendered output as a resource of kind: Context.
+```
+The following example demonstrates how to locally render function-python compositions. First, create the following files:
 #### xr.yaml
 ```yaml
-apiVersion: pythonic.fortra.com/v1alpha1
+apiVersion: pythonic.fn.crossplane.io/v1alpha1
 kind: Hello
 metadata:
   name: world
@@ -358,10 +404,10 @@ spec:
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
-  name: hellos.pythonic.fortra.com
+  name: hellos.pythonic.crossplane.io
 spec:
   compositeTypeRef:
-    apiVersion: pythonic.fortra.com/v1alpha1
+    apiVersion: pythonic.crossplane.io/v1alpha1
     kind: Hello
   mode: Pipeline
   pipeline:
@@ -369,50 +415,38 @@ spec:
     functionRef:
       name: function-pythonic
     input:
-      apiVersion: pythonic.fn.fortra.com/v1alpha1
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
       kind: Composite
       composite: |
         class GreetingComposite(BaseComposite):
           def compose(self):
             self.status.greeting = f"Hello, {self.spec.who}!"
 ```
-#### functions.yaml
-```yaml
-apiVersion: pkg.crossplane.io/v1
-kind: Function
-metadata:
-  name: function-pythonic
-  annotations:
-    render.crossplane.io/runtime: Development
-spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.1.5
-```
-In one terminal session, run function-pythonic:
+Then, to render the above composite and composition, run:
 ```shell
-$ function-pythonic --insecure --debug --render-unknowns
-[2025-08-21 15:32:37.966] grpc._cython.cygrpc  [DEBUG   ] Using AsyncIOEngine.POLLER as I/O engine
-```
-In another terminal session, render the Composite:
-```shell
-$ crossplane render xr.yaml composition.yaml functions.yaml
+$ function-pythonic render --debug --render-unknowns xr.yaml composition.yaml
+[2025-12-29 09:44:57.949] io.crossplane.fn.pythonic.Hello.world    [DEBUG   ] Starting compose, 1st step, 1st pass
+[2025-12-29 09:44:57.949] io.crossplane.fn.pythonic.Hello.world    [INFO    ] Completed compose
 ---
-apiVersion: pythonic.fortra.com/v1alpha1
+apiVersion: pythonic.fn.crossplane.io/v1alpha1
 kind: Hello
 metadata:
   name: world
 status:
   conditions:
-  - lastTransitionTime: "2024-01-01T00:00:00Z"
+  - lastTransitionTime: '2026-01-01T00:00:00Z'
     reason: Available
-    status: "True"
+    status: 'True'
     type: Ready
-  - lastTransitionTime: "2024-01-01T00:00:00Z"
+  - lastTransitionTime: '2026-01-01T00:00:00Z'
     message: All resources are composed
     reason: AllComposed
-    status: "True"
+    status: 'True'
     type: ResourcesComposed
   greeting: Hello, World!
 ```
+Most of the examples contain a `render.sh` command which uses `function-pythonic render` to
+render the example.
 
 ## ConfigMap Packages
 
@@ -441,7 +475,7 @@ Then, in your Composition:
     functionRef:
       name: function-pythonic
     input:
-      apiVersion: pythonic.fn.fortra.com/v1alpha1
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
       kind: Composite
       composite: |
         from example.pythonic import features
@@ -473,7 +507,7 @@ data:
     functionRef:
       name: function-pythonic
     input:
-      apiVersion: pythonic.fn.fortra.com/v1alpha1
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
       kind: Composite
       composite: example.pythonic.features.FeatureOneComposite
     ...
@@ -487,7 +521,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.1.5
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.2.0
   runtimeConfigRef:
     name: function-pythonic
 ---
@@ -580,7 +614,7 @@ data:
     functionRef:
       name: function-pythonic
     input:
-      apiVersion: pythonic.fn.fortra.com/v1alpha1
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
       kind: Composite
       parameters:
         who: World

@@ -2,7 +2,7 @@ request:
   observed:
     composite:
       resource:
-        apiVersion: pythonic.fortra.com/v1alpha1
+        apiVersion: pythonic.crossplane.io/v1alpha1
         kind: Composite
         spec:
           composite: |

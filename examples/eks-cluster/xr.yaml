@@ -1,4 +1,4 @@
-apiVersion: pythonic.fortra.com/v1alpha1
+apiVersion: pythonic.crossplane.io/v1alpha1
 kind: EksCluster
 metadata:
   name: pythonic
@@ -10,4 +10,4 @@ spec:
   tags:
     project: development
     environment: stage
-    'fortra:cloudops': 'owned'
+    'crossplane-contrib:cloudops': 'owned'

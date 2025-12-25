@@ -59,5 +59,5 @@ class VClusterStatusComposite(VClusterComposite):
 
         self.conditions.VClusterReady(reason, message, status)
         if not status:
-            self.events.info(reason, message)
+            self.results.info(reason, message)
             self.ready = False

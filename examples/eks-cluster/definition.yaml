@@ -1,14 +1,14 @@
 apiVersion: apiextensions.crossplane.io/v1
 kind: CompositeResourceDefinition
 metadata:
-  name: eksclusters.pythonic.fortra.com
+  name: eksclusters.pythonic.crossplane.io
 spec:
-  group: pythonic.fortra.com
+  group: pythonic.crossplane.io
   names:
     kind: EksCluster
     plural: eksclusters
   defaultCompositionRef:
-    name: eksclusters.pythonic.fortra.com
+    name: eksclusters.pythonic.crossplane.io
   versions:
   - name: v1alpha1
     served: true

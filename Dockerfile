@@ -15,4 +15,4 @@ RUN \
 USER pythonic:pythonic
 WORKDIR /opt/pythonic
 EXPOSE 9443
-ENTRYPOINT ["function-pythonic"]
+ENTRYPOINT ["function-pythonic", "grpc"]

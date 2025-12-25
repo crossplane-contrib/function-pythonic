@@ -196,9 +196,8 @@ spec:
       name: function-pythonic
 EOF
 
-#  package: ghcr.io/iciclespider/function-pythonic:v0.0.0-20251204014512-08165a015bbf
-#  package: ghcr.io/fortra/function-pythonic:v0.0.0-20250819201108-49cfb066579f
-#  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.1.5
+#  package: ghcr.io/crossplane-contrib/function-pythonic:v0.0.0-20250819201108-49cfb066579f
+#  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.2.0
 
 kubectl apply -f - <<EOF
 apiVersion: pkg.crossplane.io/v1
@@ -206,7 +205,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.1.5
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.2.0
   runtimeConfigRef:
     apiVersion: pkg.crossplane.io/v1beta1
     kind: DeploymentRuntimeConfig

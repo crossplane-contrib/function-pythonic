@@ -1,7 +1,7 @@
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
-  name: example-recursive-wrapper # defining the wrapper composition
+  name: example-function-get-credential-data
 spec:
   compositeTypeRef:
     apiVersion: example.crossplane.io/v1beta1
@@ -11,13 +11,17 @@ spec:
   - step: render-templates
     functionRef:
       name: function-pythonic
+    credentials:
+      - name: foo-creds
+        secretRef:
+          name: foo-creds
+          namespace: default
+        source: Secret
     input:
       apiVersion: pythonic.fn.crossplane.io/v1alpha1
       kind: Composite
       composite: |
         class Composite(BaseComposite):
           def compose(self):
-            for ix in range(int(self.spec.count)):
-              r = self.resources[f"test-xr-{ix}"]('example.crossplane.io/v1beta1', 'XR')
-              r.spec.compositionRef.name = 'example-recursive-real'
-              r.spec.region = f"us-west-{ix+1}"
+            self.context.username = self.credentials['foo-creds'].username
+            self.context.password = self.credentials['foo-creds'].password

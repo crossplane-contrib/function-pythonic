@@ -13,7 +13,7 @@ spec:
     functionRef:
       name: function-pythonic
     input:
-      apiVersion: pythonic.fn.fortra.com/v1alpha1
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
       kind: Composite
       composite: |
         from crossplane.pythonic import BaseComposite
@@ -47,7 +47,7 @@ spec:
                 if len(vpcs) == 1:
                   vpc.externalName = vpcs[0]['VpcId']
                 else:
-                  self.events.fatal('MultipleResources', f"More than one vpc found for: {self.metadata.name}")
+                  self.results.fatal('MultipleResources', f"More than one vpc found for: {self.metadata.name}")
             self.status.vpcId = vpc.status.atProvider.id
             return vpc
 

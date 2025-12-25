@@ -23,7 +23,7 @@ async def test_run_function(fn_case):
         observed=fnv1.State(
             composite=fnv1.Resource(
                 resource={
-                    'apiVersion': 'pythonic.fortra.com/v1alpha1',
+                    'apiVersion': 'pythonic.crossplane.io/v1alpha1',
                     'kind': 'PyTest',
                     'metadata': {
                         'name': fn_case.stem,

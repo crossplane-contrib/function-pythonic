@@ -1,3 +1,23 @@
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: composites.pythonic.crossplane.io
+spec:
+  compositeTypeRef:
+    apiVersion: pythonic.crossplane.io/v1alpha1
+    kind: Composite
+  mode: Pipeline
+  pipeline:
+  - step: pythonic
+    functionRef:
+      name: function-pythonic
+    input:
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
+      kind: Composite
+      # functin-pythonic gets the python from the composite itself
+      composite: ''
+---
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:

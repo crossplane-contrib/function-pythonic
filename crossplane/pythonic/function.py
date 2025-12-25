@@ -48,7 +48,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         name.append(composite['metadata']['name'])
         logger = logging.getLogger('.'.join(name))
 
-        if composite['apiVersion'] == 'pythonic.fortra.com/v1alpha1' and composite['kind'] == 'Composite':
+        if composite['apiVersion'] in ('pythonic.crossplane.io/v1alpha1', 'pythonic.fortra.com/v1alpha1') and composite['kind'] == 'Composite':
             if 'spec' not in composite or 'composite' not in composite['spec']:
                 return self.fatal(request, logger, 'Missing spec "composite"')
             single_use = True
@@ -276,30 +276,30 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
             reason = 'FatalUnknowns'
             message = f"Observed resources with unknowns: {','.join(fatalResources)}"
             status = False
-            event = composite.events.fatal
+            result = composite.results.fatal
         elif warningResources:
             level = composite.logger.warning
             reason = 'ObservedUnknowns'
             message = f"Observed resources with unknowns: {','.join(warningResources)}"
             status = False
-            event = composite.events.warning
+            result = composite.results.warning
         elif unknownResources:
             level = composite.logger.info
             reason = 'DesiredUnknowns'
             message = f"Desired resources with unknowns: {','.join(unknownResources)}"
             status = False
-            event = composite.events.info
+            result = composite.results.info
         else:
             level = None
             reason = 'AllComposed'
             message = 'All resources are composed'
             status = True
-            event = None
+            result = None
         if not self.debug and level:
             level(message)
         composite.conditions.ResourcesComposed(reason, message, status)
-        if event:
-            event(reason, message)
+        if result:
+            result(reason, message)
 
     def process_auto_readies(self, composite):
         for name, resource in composite.resources:

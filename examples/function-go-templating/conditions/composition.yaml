@@ -13,7 +13,7 @@ spec:
     functionRef:
       name: function-pythonic
     input:
-      apiVersion: pythonic.fn.fortra.com/v1alpha1
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
       kind: Composite
       step: conditions
       composite: |
@@ -29,7 +29,3 @@ spec:
             #self.conditions.TestCondition4.reason = 'InstallFail4'
             #self.conditions.TestCondition4.message = 'failed to install 4'            
             #self.conditions.TestCondition4.status = False
-
-  - step: automatically-detect-ready-composed-resources
-    functionRef:
-      name: function-auto-ready

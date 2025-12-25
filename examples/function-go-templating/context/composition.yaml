@@ -9,34 +9,23 @@ spec:
   mode: Pipeline
   pipeline:
 
-  - step: environmentConfigs
-    functionRef:
-      name: function-environment-configs
-    input:
-      apiVersion: environmentconfigs.fn.crossplane.io/v1beta1
-      kind: Input
-      spec:
-        environmentConfigs:
-          - type: Reference
-            ref:
-              name: example-config
-
   - step: python-update-conditions
     functionRef:
       name: function-pythonic
     input:
-      apiVersion: pythonic.fn.fortra.com/v1alpha1
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
       kind: Composite
       composite: |
         class Composite(BaseComposite):
           def compose(self):
+            self.environment.complex = self.requireds['example-config'](
+              'apiextensions.crossplane.io/v1alpha1',
+              'EnvironmentConfig',
+              name='example-config',
+            )[0].data.complex
             self.environment.update = 'environment'
             self.environment.nestedEnvUpdate.hello = 'world'
             self.environment.array = ['1', '2']
             self.context['other-context-key'].complex = self.environment.complex
             self.context.newKey.hello = 'world'
             self.status.fromEnv = self.environment.complex.c.d
-
-  - step: automatically-detect-ready-composed-resources
-    functionRef:
-      name: function-auto-ready

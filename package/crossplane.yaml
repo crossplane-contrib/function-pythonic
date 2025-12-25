@@ -2,4 +2,13 @@ apiVersion: meta.pkg.crossplane.io/v1
 kind: Function
 metadata:
   name: function-pythonic
+  annotations:
+    meta.crossplane.io/source: github.com/crossplane-contrib/function-pythonic
+    meta.crossplane.io/license: Apache-2.0
+    meta.crossplane.io/description: Python based Crossplane Function providing a clean and elegant syntax for writing Crossplane Compositions
+    meta.crossplane.io/readme: |
+      A Crossplane composition function that lets you compose Composites using
+      a set of python classes enabling an elegant and terse syntax. See the
+      [README](https://github.com/crossplane-contrib/function-pythonic)
+      for examples and documentation.
 spec: {}
