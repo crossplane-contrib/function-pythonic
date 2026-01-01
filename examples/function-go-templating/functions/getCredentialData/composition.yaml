@@ -12,11 +12,11 @@ spec:
     functionRef:
       name: function-pythonic
     credentials:
-      - name: foo-creds
-        secretRef:
-          name: foo-creds
-          namespace: default
-        source: Secret
+    - name: foo-creds
+      source: Secret
+      secretRef:
+        namespace: default
+        name: foo-creds
     input:
       apiVersion: pythonic.fn.crossplane.io/v1alpha1
       kind: Composite

@@ -1,0 +1,8 @@
+apiVersion: example.pythonic.crossplane.io/v1alpha1
+kind: Connection
+metadata:
+  name: example-connection
+spec:
+  writeConnectionSecretToRef:
+    namespace: default
+    name: composite-connection

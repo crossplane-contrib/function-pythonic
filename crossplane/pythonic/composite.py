@@ -40,6 +40,7 @@ class BaseComposite:
         observed = self.request.observed.composite
         desired = self.response.desired.composite
         self.observed = observed.resource
+        self.observed._set_attribute('connection', self.request.observed.composite.connection_details)
         self.desired = desired.resource
         self.apiVersion = self.observed.apiVersion
         self.kind = self.observed.kind
@@ -434,6 +435,7 @@ class RequiredResource:
         self.data = self.observed.data
         self.status = self.observed.status
         self.conditions = Conditions(resource)
+        self.connection = self.observed.connection_details
 
     def __bool__(self):
         return bool(self.observed)

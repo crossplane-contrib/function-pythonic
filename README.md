@@ -57,7 +57,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.2.0
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.2.1
 ```
 ## Composed Resource Dependencies
 
@@ -204,8 +204,9 @@ The BaseComposite class provides the following fields for manipulating the Compo
 | self.status | Map | The composite desired and observed status, read from observed if not in desired |
 | self.conditions | Conditions | The composite desired and observed conditions, read from observed if not in desired |
 | self.results | Results | Returned results applied to the Composite and optionally on the Claim |
-| self.connection | Connection | The composite desired and observed connection detials, read from observed if not in desired |
+| self.connection | Map | The composite desired connection detials |
 | self.ready | Boolean | The composite desired ready state |
+| self.observed.connection | Map | The composite observed connection detials |
 
 The BaseComposite also provides access to the following Crossplane Function level features:
 
@@ -246,7 +247,7 @@ Resource class:
 | Resource.data | Map | The resource data |
 | Resource.status | Map | The resource status |
 | Resource.conditions | Conditions | The resource conditions |
-| Resource.connection | Connection | The resource connection details |
+| Resource.connection | Map | The resource observed connection details |
 | Resource.ready | Boolean | The resource ready state |
 | Resource.unknownsFatal | Boolean | Terminate the composition if this resource has been created and is assigned unknown values, default is Composite.unknownsFatal |
 | Resource.usages | Boolean | Generate Crossplane Usages for this resource, default is Composite.autoReady |
@@ -286,6 +287,7 @@ Each resource in the list is the following RequiredResource class:
 | RequiredResource.data | Map | The required resource data |
 | RequiredResource.status | Map | The required resource status |
 | RequiredResource.conditions | Map | The required resource conditions |
+| RequiredResource.connection | Map | The required resource connection details |
 
 ### Conditions
 
@@ -348,11 +350,11 @@ $ pip install crossplane-function-pythonic
 Then to render function-pythonic Compositions, use the `function-pythonic render ...`
 command.
 ```shell
-$ function-pythonic render --help
+$ function-pythonic render -h
 usage: Crossplane Function Pythonic render [-h] [--debug] [--log-name-width WIDTH] [--python-path DIRECTORY] [--render-unknowns]
                                            [--allow-oversize-protos] [--context-files KEY=PATH] [--context-values KEY=VALUE]
-                                           [--observed-resources PATH] [--extra-resources PATH] [--required-resources PATH]
-                                           [--function-credentials PATH] [--include-full-xr] [--include-function-results] [--include-context]
+                                           [--observed-resources PATH] [--required-resources PATH] [--secret-store PATH] [--include-full-xr]
+                                           [--include-connection-xr] [--include-function-results] [--include-context]
                                            PATH [PATH/CLASS]
 
 positional arguments:
@@ -376,14 +378,14 @@ options:
                         Context key-value pairs to pass to the Function pipeline. Values must be YAML/JSON. Keys take precedence over --context-files.
   --observed-resources, -o PATH
                         A YAML file or directory of YAML files specifying the observed state of composed resources.
-  --extra-resources PATH
-                        A YAML file or directory of YAML files specifying required resources (deprecated, use --required-resources).
   --required-resources, -e PATH
                         A YAML file or directory of YAML files specifying required resources to pass to the Function pipeline.
-  --function-credentials PATH
-                        A YAML file or directory of YAML files specifying credentials to use for Functions to render the XR.
+  --secret-store, -s PATH
+                        A YAML file or directory of YAML files specifying Secrets to use to resolve connections and credentials.
   --include-full-xr, -x
                         Include a direct copy of the input XR's spedc and metadata fields in the rendered output.
+  --include-connection-xr
+                        Include the Composite connection values in the rendered output as a resource of kind: Connection.
   --include-function-results, -r
                         Include informational and warning messages from Functions in the rendered output as resources of kind: Result..
   --include-context, -c
@@ -521,7 +523,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.2.0
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.2.1
   runtimeConfigRef:
     name: function-pythonic
 ---

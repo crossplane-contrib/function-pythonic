@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: default
+  name: rds-connection
+data:
+  username: cmRzLXVzZXJuYW1l # rds-username
+  password: cmRzLXBhc3N3b3Jk # rds-password

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: default
+  name: composite-connection
+data:
+  username: Y29tcG9zaXRlLXVzZXJuYW1l # composite-username
+  password: Y29tcG9zaXRlLXBhc3N3b3Jk # composite-password

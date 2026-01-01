@@ -54,14 +54,6 @@ class Command(command.Command):
             help='A YAML file or directory of YAML files specifying the observed state of composed resources.'
         )
         parser.add_argument(
-            '--extra-resources',
-            action='append',
-            type=pathlib.Path,
-            default=[],
-            metavar='PATH',
-            help='A YAML file or directory of YAML files specifying required resources (deprecated, use --required-resources).',
-        )
-        parser.add_argument(
             '--required-resources', '-e',
             action='append',
             type=pathlib.Path,
@@ -70,17 +62,22 @@ class Command(command.Command):
             help='A YAML file or directory of YAML files specifying required resources to pass to the Function pipeline.',
         )
         parser.add_argument(
-            '--function-credentials',
+            '--secret-store', '-s',
             action='append',
             type=pathlib.Path,
             default=[],
             metavar='PATH',
-            help='A YAML file or directory of YAML files specifying credentials to use for Functions to render the XR.',
+            help='A YAML file or directory of YAML files specifying Secrets to use to resolve connections and credentials.',
         )
         parser.add_argument(
             '--include-full-xr', '-x',
             action='store_true',
             help="Include a direct copy of the input XR's spedc and metadata fields in the rendered output.",
+        )
+        parser.add_argument(
+            '--include-connection-xr',
+            action='store_true',
+            help="Include the Composite connection values in the rendered output as a resource of kind: Connection.",
         )
         parser.add_argument(
             '--include-function-results', '-r',
@@ -158,22 +155,26 @@ class Command(command.Command):
                 sys.exit(1)
             request.context[key_value[0]] = protobuf.Yaml(key_value[1])
 
-        # Establish the request observed composite and specifed observed resources.
-        request.observed.composite.resource = composite
+        # Collect specified required/extra resources. Sort for stable order when processed.
+        requireds = sorted(
+            self.collect_resources(self.args.required_resources),
+            key=lambda required: str(resource.metadata.name),
+        )
+
+        # Collect specified connection and credential secrets.
+        secrets = []
+        for secret in self.collect_resources(self.args.secret_store):
+            if secret.apiVersion == 'v1' and secret.kind == 'Secret':
+                secrets.append(secret)
+
+        # Establish the request observed composite.
+        self.setup_resource(composite, secrets, request.observed.composite)
+
+        # Establish the configured observed resources.
         for resource in self.collect_resources(self.args.observed_resources):
             name = resource.metadata.annotations['crossplane.io/composition-resource-name']
             if name:
-                request.observed.resources[str(name)].resource = resource
-
-        # Collect specified required/extra resources.
-        requireds = [resource for resource in self.collect_resources(self.args.required_resources)]
-        requireds += [resource for resource in self.collect_resources(self.args.extra_resources)]
-
-        # Collect specified credential secrets.
-        credentials = []
-        for credential in self.collect_resources(self.args.function_credentials):
-            if credential.apiVersion == 'v1' and credential.kind == 'Secret':
-                credentials.append(credential)
+                self.setup_resource(resource, secrets, request.observed.resources[name])
 
         # These will hold the response conditions and results.
         conditions = protobuf.List()
@@ -194,18 +195,21 @@ class Command(command.Command):
 
             # Supply step requested credentials.
             request.credentials()
-            for fn_credential in step.credentials:
-                if fn_credential.source == 'Secret' and fn_credential.secretRef:
-                    for credential in credentials:
-                        if credential.metadata.namespace == fn_credential.secretRef.namespace and credential.metadata.name == fn_credential.secretRef.name:
-                            data = request.credentials[str(fn_credential.name)].credential_data.data
-                            data()
-                            for key, value in credential.data:
-                                data[key] = protobuf.B64Decode(value)
-                            break
-                    else:
-                        print(f"Step \"{step.step}\" secret not found: {fn_credential.secretRef.namespace} {fn_credential.secretRef.name}", file=sys.stderr)
-                        sys.exit(1)
+            for credential in step.credentials:
+                if credential.source == 'Secret' and credential.secretRef:
+                    namespace = credential.secretRef.namespace
+                    name = credential.secretRef.name
+                    if namespace and name:
+                        for secret in secrets:
+                            if secret.metadata.namespace == namespace and secret.metadata.name == name:
+                                data = request.credentials[credential.name].credential_data.data
+                                data()
+                                for key, value in secret.data:
+                                    data[key] = protobuf.B64Decode(value)
+                                break
+                        else:
+                            print(f"Step \"{step.step}\" secret not found: {namespace}/{name}", file=sys.stderr)
+                            sys.exit(1)
 
             # Track what extra/required resources have been processed.
             requirements = protobuf.Message(None, 'requirements', fnv1.Requirements.DESCRIPTOR, fnv1.Requirements())
@@ -213,14 +217,14 @@ class Command(command.Command):
                 # Fetch the step bootstrap resources specified.
                 request.required_resources()
                 for requirement in step.requirements:
-                    self.fetch_requireds(requireds, requirement.requirementName, requirement, request.required_resources)
+                    self.fetch_requireds(requireds, secrets, requirement.requirementName, requirement, request.required_resources)
                 # Fetch the required resources requested.
                 for name, selector in requirements.resources:
-                    self.fetch_requireds(requireds, name, selector, request.required_resources)
+                    self.fetch_requireds(requireds, secrets, name, selector, request.required_resources)
                 # Fetch the now deprecated extra resources requested.
                 request.extra_resources()
                 for name, selector in requirements.extra_resources:
-                    self.fetch_requireds(requireds, name, selector, request.extra_resources)
+                    self.fetch_requireds(requireds, secrets, name, selector, request.extra_resources)
                 # Run the step using the function-pythonic function runner.
                 response = protobuf.Message(
                     None,
@@ -330,15 +334,29 @@ class Command(command.Command):
         # Print the composite.
         print('---')
         print(str(composite), end='')
+
+        # Print Composite connection if requested.
+        if self.args.include_connection_xr:
+            connection = protobuf.Map(
+                apiVersion = 'render.crossplane.io/v1beta1',
+                kind = 'Connection',
+            )
+            for key, value in request.desired.composite.connection_details:
+                connection.values[key] = value
+            print('---')
+            print(str(connection), end='')
+
         # Print the composed resources.
         for resource in sorted(resources, key=lambda resource: str(resource.metadata.annotations['crossplane.io/composition-resource-name'])):
             print('---')
             print(str(resource), end='')
+
         # Print the results (AKA events) if requested.
         if self.args.include_function_results:
             for result in results:
                 print('---')
                 print(str(result), end='')
+
         # Print the final context if requested.
         if self.args.include_context:
             print('---')
@@ -346,7 +364,7 @@ class Command(command.Command):
                 str(protobuf.Map(
                     apiVersion = 'render.crossplane.io/v1beta1',
                     kind = 'Context',
-                    fields = request.context,
+                    values = request.context,
                 )),
                 end='',
             )
@@ -382,7 +400,19 @@ class Command(command.Command):
             for document in yaml.safe_load_all(file.read_text()):
                 yield protobuf.Value(None, None, document)
 
-    def fetch_requireds(self, requireds, name, selector, resources):
+    def setup_resource(self, source, secrets, resource):
+        resource.resource = source
+        namespace = source.spec.writeConnectionSecretToRef.namespace or source.metadata.namespace
+        name = source.spec.writeConnectionSecretToRef.name
+        if namespace and name:
+            for secret in secrets:
+                if secret.metadata.namespace == namespace and secret.metadata.name == name:
+                    resource.connection_details()
+                    for key, value in secret.data:
+                        resource.connection_details[key] = protobuf.B64Decode(value)
+                    break
+
+    def fetch_requireds(self, requireds, secrets, name, selector, resources):
         if not name:
             return
         name = str(name)
@@ -391,13 +421,13 @@ class Command(command.Command):
         for required in requireds:
             if selector.api_version == required.apiVersion and selector.kind == required.kind:
                 if selector.match_name == required.metadata.name:
-                    items[protobuf.append].resource = required
+                    self.setup_resource(required, secrets, items[protobuf.append])
                 elif selector.match_labels.labels:
                     for key, value in selector.match_labels.labels:
                         if value != required.metadata.labels[key]:
                             break
                     else:
-                        items[protobuf.append].resource = required
+                        self.setup_resource(required, secrets, items[protobuf.append])
 
     def copy_resource(self, source, destination):
         destination.resource = source.resource

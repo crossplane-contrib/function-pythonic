@@ -1,0 +1,48 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: function-sequencer
+spec:
+  compositeTypeRef:
+    apiVersion: example.crossplane.io/v1
+    kind: XR
+  mode: Pipeline
+  pipeline:
+
+  - step: create-resources
+    functionRef:
+      name: function-pythonic
+    input:
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
+      kind: Composite
+      composite: |
+        class Composite(BaseComposite):
+
+          def compose(self):
+            self.create_resource('first',  (5, False), (10, True), (30, False), (90, True))
+            self.create_resource('second', (5, False), (10, True))
+            self.create_resource('third',  (5, False), (10, True))
+
+          def create_resource(self, name, *conditions):
+            resource = self.resources[f"{name}-resource"]('nop.crossplane.io/v1alpha1', 'NopResource')
+            for ix, (seconds, status) in enumerate(conditions):
+              resource.spec.forProvider.conditionAfter[ix](
+                time=f"{seconds}s",
+                conditionType='Ready',
+                conditionStatus=str(status),
+              )
+
+  - step: sequencer
+    functionRef:
+      name: function-pythonic
+    input:
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
+      kind: Composite
+      composite: |
+        class Composite(BaseComposite):
+          def compose(self):
+            if not self.resources['first-resource'].ready:
+              for resource in ('second-resource', 'third-resource'):
+                if not self.resources[resource].observed:
+                  del self.resources[resource]
+                  self.results.info(message=f"Delaying creation of resource matching \"{resource}\" because \"first-resource\" is not fully ready")

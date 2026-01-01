@@ -1,0 +1,39 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: pythonic-example-connection
+spec:
+  compositeTypeRef:
+    apiVersion: example.pythonic.crossplane.io/v1alpha1
+    kind: Connection
+  mode: Pipeline
+  pipeline:
+  - step: connections
+    functionRef:
+      name: function-pythonic
+    credentials:
+    - name: step
+      source: Secret
+      secretRef:
+        namespace: default
+        name: step-credential
+    input:
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
+      kind: Composite
+      composite: |
+        class Composite(BaseComposite):
+          def compose(self):
+            rds = self.resources.rds('rds.aws.upbound.io/v1beta1', 'Instance')
+            rds.spec.forProvider.name = 'pythonic-example'
+            rds.spec.writeConnectionSecretToRef.namespace = 'default'
+            rds.spec.writeConnectionSecretToRef.name = 'rds-connection'
+
+            self.connection['self-username'] = 'self-username'
+            self.connection['self-password'] = 'self-password'
+            for name, credential in self.credentials:
+              for key, value in credential:
+                self.connection[f"{name}-{key}"] = value
+            for key, value in self.observed.connection:
+              self.connection[f"composite-{key}"] = value
+            for key, value in rds.connection:
+              self.connection[f"rds-{key}"] = value

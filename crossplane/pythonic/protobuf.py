@@ -58,17 +58,21 @@ def B64Decode(string):
 
 class Message:
     def __init__(self, parent, key, descriptor, message=_Unknown, readOnly=False):
-        self.__dict__['_parent'] = parent
-        self.__dict__['_key'] = key
-        self.__dict__['_descriptor'] = descriptor
-        self.__dict__['_message'] = message
-        self.__dict__['_readOnly'] = readOnly
-        self.__dict__['_cache'] = {}
+        self._set_attribute('_parent', parent)
+        self._set_attribute('_key', key)
+        self._set_attribute('_descriptor', descriptor)
+        self._set_attribute('_message', message)
+        self._set_attribute('_readOnly', readOnly)
+        self._set_attribute('_cache', {})
+
+    def _set_attribute(self, key, value):
+        self.__dict__[key] = value
 
     def __getattr__(self, key):
         return self[key]
 
     def __getitem__(self, key):
+        key = self._validate_key(key)
         if key in self._cache:
             return self._cache[key]
         field = self._descriptor.fields_by_name.get(key)
@@ -156,6 +160,7 @@ class Message:
     def _create_child(self, key):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
+        key = self._validate_key(key)
         if self._message is _Unknown:
             self.__dict__['_message'] = self._parent._create_child(self._key)
         return getattr(self._message, key)
@@ -177,6 +182,7 @@ class Message:
     def __setitem__(self, key, value):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
+        key = self._validate_key(key)
         if key not in self._descriptor.fields_by_name:
             raise AttributeError(obj=self, name=key)
         field = self._descriptor.fields_by_name[key]
@@ -201,26 +207,40 @@ class Message:
     def __delitem__(self, key):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
+        key = self._validate_key(key)
         if key not in self._descriptor.fields_by_name:
             raise AttributeError(obj=self, name=key)
         if self._message is not _Unknown:
             self._message.ClearField(key)
             self._cache.pop(key, None)
 
+    def _validate_key(self, key):
+        if isinstance(key, FieldMessage):
+            key = key._value
+        elif isinstance(key, Value):
+            key = key._raw
+        if not isinstance(key, str):
+            raise TypeError(f"Unexpected key type: {key.__class__}")
+        return key
+
 
 class MapMessage:
     def __init__(self, parent, key, field, messages=_Unknown, readOnly=False):
-        self.__dict__['_parent'] = parent
-        self.__dict__['_key'] = key
-        self.__dict__['_field'] = field
-        self.__dict__['_messages'] = messages
-        self.__dict__['_readOnly'] = readOnly
-        self.__dict__['_cache'] = {}
+        self._set_attribute('_parent', parent)
+        self._set_attribute('_key', key)
+        self._set_attribute('_field', field)
+        self._set_attribute('_messages', messages)
+        self._set_attribute('_readOnly', readOnly)
+        self._set_attribute('_cache', {})
+
+    def _set_attribute(self, key, value):
+        self.__dict__[key] = value
 
     def __getattr__(self, key):
         return self[key]
 
     def __getitem__(self, key):
+        key = self._validate_key(key)
         if key in self._cache:
             return self._cache[key]
         if self._messages is _Unknown or key not in self._messages:
@@ -304,6 +324,7 @@ class MapMessage:
     def _create_child(self, key):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
+        key = self._validate_key(key)
         if self._messages is _Unknown:
             self.__dict__['_messages'] = self._parent._create_child(self._key)
         return self._messages[key]
@@ -325,6 +346,7 @@ class MapMessage:
     def __setitem__(self, key, message):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
+        key = self._validate_key(key)
         if self._messages is _Unknown:
             self._messages = self._parent._create_child(self._key)
         if isinstance(message, Message):
@@ -349,10 +371,20 @@ class MapMessage:
     def __delitem__(self, key):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
+        key = self._validate_key(key)
         if self._messages is not _Unknown:
             if key in self._messages:
                 del self._messages[key]
             self._cache.pop(key, None)
+
+    def _validate_key(self, key):
+        if isinstance(key, FieldMessage):
+            key = key._value
+        elif isinstance(key, Value):
+            key = key._raw
+        if not isinstance(key, str):
+            raise TypeError(f"Unexpected key type: {key.__class__}")
+        return key
 
 
 class RepeatedMessage:
@@ -365,6 +397,7 @@ class RepeatedMessage:
         self._cache = {}
 
     def __getitem__(self, key):
+        key = self._validate_key(key)
         if key in self._cache:
             return self._cache[key]
         if self._messages is _Unknown or key >= len(self._messages):
@@ -447,6 +480,7 @@ class RepeatedMessage:
     def _create_child(self, key):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
+        key = self._validate_key(key)
         if self._messages is _Unknown:
             self.__dict__['_messages'] = self._parent._create_child(self._key)
         if key == append:
@@ -471,6 +505,7 @@ class RepeatedMessage:
     def __setitem__(self, key, message):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
+        key = self._validate_key(key)
         if self._messages is _Unknown:
             self._messages = self._parent._create_child(self._key)
         if key < 0:
@@ -499,6 +534,7 @@ class RepeatedMessage:
     def __delitem__(self, key):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
+        key = self._validate_key(key)
         if self._messages is not _Unknown:
             del self._messages[key]
             self._cache.pop(key, None)
@@ -514,13 +550,22 @@ class RepeatedMessage:
             message = self._messages.append(message)
         return self[len(self._messages) - 1]
 
+    def _validate_key(self, key):
+        if isinstance(key, FieldMessage):
+            key = key._value
+        elif isinstance(key, Value):
+            key = key._raw
+        if not isinstance(key, int):
+            raise TypeError(f"Unexpected key type: {key.__class__}")
+        return key
+
 
 class FieldMessage:
     def __init__(self, parent, key, kind, value):
-        self.__dict__['_parent'] = parent
-        self.__dict__['_key'] = key
-        self.__dict__['_kind'] = kind
-        self.__dict__['_value'] = value
+        self._parent = parent
+        self._key = key
+        self._kind = kind
+        self._value = value
 
     def __bool__(self):
         return bool(self._value)
@@ -539,7 +584,14 @@ class FieldMessage:
             return self._value == other._value
         return self._value == other
 
+    def __bytes__(self):
+        if isinstance(self._value, str):
+            return self._value.encode('utf-8')
+        return bytes(self._value)
+
     def __str__(self):
+        if isinstance(self._value, bytes):
+            return self._value.decode('utf-8')
         return str(self._value)
 
     def __format__(self, spec=''):
@@ -576,16 +628,16 @@ class ProtobufValue:
 
 class Value:
     def __init__(self, parent, key, value=_Unknown, readOnly=None):
-        self.__dict__['_parent'] = parent
-        self.__dict__['_key'] = key
-        self.__dict__['_dependencies'] = {}
-        self.__dict__['_unknowns'] = {}
-        self.__dict__['_cache'] = {}
-        self.__dict__['_readOnly'] = None
+        self._set_attribute('_parent', parent)
+        self._set_attribute('_key', key)
+        self._set_attribute('_dependencies', {})
+        self._set_attribute('_unknowns', {})
+        self._set_attribute('_cache', {})
+        self._set_attribute('_readOnly', None)
         if isinstance(value, (google.protobuf.struct_pb2.Value, google.protobuf.struct_pb2.Struct, google.protobuf.struct_pb2.ListValue)) or value is _Unknown:
-            self.__dict__['_value'] = value
+            self._set_attribute('_value', value)
         else:
-            self.__dict__['_value'] = google.protobuf.struct_pb2.Value()
+            self._set_attribute('_value', google.protobuf.struct_pb2.Value())
             if value is None:
                 self._value.null_value = 0
             elif isinstance(value, dict):
@@ -604,12 +656,16 @@ class Value:
                 self._value.string_value = value
             else:
                 raise ValueError(f"Unexpected Value type: {value.__class__}")
-        self.__dict__['_readOnly'] = readOnly
+        self._set_attribute('_readOnly', readOnly)
+
+    def _set_attribute(self, key, value):
+        self.__dict__[key] = value
 
     def __getattr__(self, key):
         return self[key]
 
     def __getitem__(self, key):
+        key = self._validate_key(key)
         if key in self._cache:
             return self._cache[key]
         if key in self._unknowns:
@@ -641,7 +697,7 @@ class Value:
                 case _:
                     raise ValueError(f"Invalid key \"{key}\" for kind: {self._kind}")
         else:
-            raise ValueError(f"Unexpected key type: {key.__class__}")
+            raise NotImplementedError()
         value = Value(self, key, value, self._readOnly)
         self._cache[key] = value
         return value
@@ -860,6 +916,7 @@ class Value:
     def __setitem__(self, key, value):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
+        key = self._validate_key(key)
         if isinstance(key, str):
             if self._ensure_map() == 'struct_value':
                 values = self._value.struct_value.fields
@@ -877,7 +934,7 @@ class Value:
             while key >= len(values):
                 values.add()
         else:
-            raise ValueError('Unexpected key type')
+            raise NotImplementedError()
         self._cache.pop(key, None)
         self._dependencies.pop(key, None)
         self._unknowns.pop(key, None)
@@ -887,6 +944,8 @@ class Value:
             values[key].null_value = 0
         elif isinstance(value, bool): # Must be before int check
             values[key].bool_value = value
+        elif isinstance(value, bytes):
+            values[key].string_value = value._value.decode('utf-8')
         elif isinstance(value, str):
             values[key].string_value = value
         elif isinstance(value, (int, float)):
@@ -995,6 +1054,7 @@ class Value:
         kind = self._kind
         if kind == 'Unknown':
             return
+        key = self._validate_key(key)
         if isinstance(key, str):
             match kind:
                 case 'struct_value':
@@ -1036,11 +1096,12 @@ class Value:
                     break
                 del values[ix]
         else:
-            raise ValueError('Unexpected key type')
+            raise NotImplementedError()
 
     def _create_child(self, key):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
+        key = self._validate_key(key)
         if isinstance(key, str):
             if self._ensure_map() == 'struct_value':
                 fields = self._value.struct_value.fields
@@ -1061,7 +1122,16 @@ class Value:
                 values.add()
             values[key].Clear()
             return values[key]
-        raise ValueError('Unexpected key type')
+        raise NotImplementedError()
+
+    def _validate_key(self, key):
+        if isinstance(key, FieldMessage):
+            key = key._value
+        elif isinstance(key, Value):
+            key = key._raw
+        if not isinstance(key, (str, int)):
+            raise TypeError(f"Unexpected key type: {key.__class__}")
+        return key
 
     def _ensure_map(self):
         kind = self._kind

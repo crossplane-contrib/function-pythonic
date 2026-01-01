@@ -1,0 +1,21 @@
+apiVersion: rds.aws.upbound.io/v1beta1
+kind: Instance
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: rds
+  generateName: composite-example-
+  labels:
+    crossplane.io/composite: composite-example
+  ownerReferences:
+  - apiVersion: pythonic.crossplane.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: Composite
+    name: composite-example
+    uid: ''
+spec:
+  forProvider:
+    name: pythonic-example
+  writeConnectionSecretToRef:
+    namespace: default
+    name: rds-connection
