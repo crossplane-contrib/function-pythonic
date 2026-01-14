@@ -1,0 +1,50 @@
+request:
+  context:
+    _pythonic:
+      pytest:
+        iteration: 1
+        requireds:
+          ConfigMap:
+            apiVersion: v1
+            kind: ConfigMap
+            namespace: src
+            matchName: test
+    iteration: 1
+  required_resources:
+    ConfigMap:
+      items: []
+  input:
+    step: pytest
+    composite: |
+      class RequiredsComposite(BaseComposite):
+        def compose(self):
+          src = self.requireds.ConfigMap('v1', 'ConfigMap', 'src', 'test')[0]
+          dst = self.resources.ConfigMap(src.apiVersion, src.kind, 'dst', src.metadata.name)
+
+response:
+  context:
+    _pythonic:
+      pytest:
+        iteration: 2
+        requireds:
+          ConfigMap:
+            apiVersion: v1
+            kind: ConfigMap
+            namespace: src
+            matchName: test
+    iteration: 2
+  requirements:
+    resources:
+      ConfigMap:
+        api_version: v1
+        kind: ConfigMap
+        namespace: src
+        match_name: test
+  conditions:
+  - status: 3
+    reason: DesiredUnknowns
+    message: 'Desired resources with unknowns: ConfigMap'
+  results:
+  - severity: 3
+    reason: DesiredUnknowns
+    message: 'Desired resources with unknowns: ConfigMap'

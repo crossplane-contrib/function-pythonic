@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
+cd $(dirname $0)
+
 helm upgrade --install crossplane \
      --namespace crossplane-system \
      --create-namespace crossplane-stable/crossplane \
-     --version v2.0.2 \
+     --version v2.1.3 \
      --set 'args={--enable-realtime-compositions=false,--debug}'
 
 kubectl apply -f - <<EOF
@@ -196,8 +198,8 @@ spec:
       name: function-pythonic
 EOF
 
-#  package: ghcr.io/crossplane-contrib/function-pythonic:v0.0.0-20250819201108-49cfb066579f
-#  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.2.1
+#  package: ghcr.io/iciclespider/function-pythonic:v0.0.0-20260115045752-3c0cf4ebffd2
+#  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.3.0
 
 kubectl apply -f - <<EOF
 apiVersion: pkg.crossplane.io/v1
@@ -205,9 +207,88 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.2.1
+  package: ghcr.io/iciclespider/function-pythonic:v0.0.0-20260115045752-3c0cf4ebffd2
   runtimeConfigRef:
     apiVersion: pkg.crossplane.io/v1beta1
     kind: DeploymentRuntimeConfig
     name: function-pythonic
+EOF
+
+awsAccount=277707108430 # GP Dev/Sandbox
+ssoRole=AdministratorPermSetBoundary
+
+if [[ -f .aws-credentials ]]
+then
+    credentials=$(<.aws-credentials)
+else
+    client=$(aws --region=us-east-2 sso-oidc register-client --client-name=local-cloudops --client-type=public)
+    id=$(echo "$client" | jq -r .clientId)
+    secret=$(echo "$client" | jq -r .clientSecret)
+    authorization=$(aws --region=us-east-2 sso-oidc start-device-authorization --client-id=$id --client-secret=$secret --start-url=https://helpsystems.awsapps.com/start)
+    code=$(echo "$authorization" | jq -r .deviceCode)
+    echo -n 'Waiting for authorization...'
+    open -a 'Google Chrome' -n --args -incognito $(echo "$authorization" | jq -r .verificationUriComplete)
+    while :
+    do
+        if response=$(aws --region=us-east-2 sso-oidc create-token --client-id=$id --client-secret=$secret --grant-type=urn:ietf:params:oauth:grant-type:device_code --device-code=$code 2>&1)
+        then
+            token=$(echo "$response" | jq -r .accessToken)
+            break
+        fi
+        if ! [[ "$response" =~ [(]AuthorizationPendingException[)] ]]
+        then
+            echo
+            echo "$response"
+            exit 1
+        fi
+        echo -n '.'
+        sleep 1
+    done
+    echo
+    credentials=$(aws --region=us-east-2 sso get-role-credentials --account-id=$awsAccount --role-name=$ssoRole --access-token=$token | jq .roleCredentials)
+    echo -n "$credentials" >.aws-credentials
+fi
+
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: crossplane-system
+  name: aws-credentials
+stringData:
+  access-key-id: $(echo "$credentials" | jq -r .accessKeyId)
+  secret-access-key: $(echo "$credentials" | jq -r .secretAccessKey)
+  session-token: $(echo "$credentials" | jq -r .sessionToken)
+  credentials: |
+    [default]
+    aws_access_key_id = $(echo "$credentials" | jq -r .accessKeyId)
+    aws_secret_access_key = $(echo "$credentials" | jq -r .secretAccessKey)
+    aws_session_token = $(echo "$credentials" | jq -r .sessionToken)
+EOF
+
+kubectl apply -f - <<EOF
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-family-iam
+spec:
+  package: xpkg.upbound.io/upbound/provider-aws-iam:v2.3.0
+  runtimeConfigRef:
+    apiVersion: pkg.crossplane.io/v1beta1
+    kind: DeploymentRuntimeConfig
+    name: provider-incluster
+EOF
+
+kubectl apply -f - <<EOF
+apiVersion: aws.m.upbound.io/v1beta1
+kind: ClusterProviderConfig
+metadata:
+  name: default
+spec:
+  credentials:
+    source: Secret
+    secretRef:
+      namespace: crossplane-system
+      name: aws-credentials
+      key: credentials
 EOF

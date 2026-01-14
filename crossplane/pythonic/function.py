@@ -9,6 +9,7 @@ import sys
 import grpc
 from crossplane.function.proto.v1 import run_function_pb2 as fnv1
 from crossplane.function.proto.v1 import run_function_pb2_grpc as grpcv1
+from . import auto_ready
 from .. import pythonic
 
 logger = logging.getLogger(__name__)
@@ -17,10 +18,11 @@ logger = logging.getLogger(__name__)
 class FunctionRunner(grpcv1.FunctionRunnerService):
     """A FunctionRunner handles gRPC RunFunctionRequests."""
 
-    def __init__(self, debug=False, renderUnknowns=False):
+    def __init__(self, debug=False, renderUnknowns=False, crossplane_v1=False):
         """Create a new FunctionRunner."""
         self.debug = debug
         self.renderUnknowns = renderUnknowns
+        self.crossplane_v1 = crossplane_v1
         self.clazzes = {}
 
     def invalidate_module(self, module):
@@ -100,7 +102,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
             self.clazzes[composite] = clazz
 
         try:
-            composite = clazz(request, single_use, logger)
+            composite = clazz(self.crossplane_v1, request, single_use, logger)
         except Exception as e:
             return self.fatal(request, logger, 'Instantiate', e)
 
@@ -122,7 +124,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         else:
             self.process_usages(composite)
             self.process_unknowns(composite)
-            self.process_auto_readies(composite)
+            auto_ready.process(composite)
             logger.info('Completed compose')
 
         return composite.response._message
@@ -152,11 +154,11 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
     def get_requireds(self, step, composite):
         requireds = []
         for name, required in composite.requireds:
-            if required.apiVersion and required.kind:
+            if len(required.apiVersion) and len(required.kind):
                 r = pythonic.Map(apiVersion=required.apiVersion, kind=required.kind)
-                if required.namespace:
+                if len(required.namespace):
                     r.namespace = required.namespace
-                if required.matchName:
+                if len(required.matchName):
                     r.matchName = required.matchName
                 for key, value in required.matchLabels:
                     r.matchLabels[key] = value
@@ -166,6 +168,10 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         return requireds
 
     def process_usages(self, composite):
+        if self.crossplane_v1:
+            apiVersion = 'apiextensions.crossplane.io/v1beta1'
+        else:
+            apiVersion = 'protection.crossplane.io/v1beta1'
         for _, resource in sorted(entry for entry in composite.resources):
             dependencies = resource.desired._getDependencies
             if dependencies:
@@ -175,7 +181,6 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                         source = self.trimFullName(source)
                         composite.logger.debug(f"Dependency: {destination} = {source}")
                 if resource.usages or (resource.usages is None and composite.usages):
-                    apiVersion = 'protection.crossplane.io/v1beta1' if composite.metadata.namespace else 'apiextensions.crossplane.io/v1beta1'
                     resources = {}
                     requireds = {}
                     for destination, source in sorted(dependencies.items()):
@@ -191,7 +196,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                             resources[name[3]].append(f"{'.'.join(destination.split('.')[5:])} = {'.'.join(name[5:])}")
                         elif (len(name) > 5 and
                             name[0] == 'request' and
-                            name[1] == 'extra_resources' and
+                            name[1] in ('required_resources', 'extra_resources') and
                             name[3].startswith('items[') and name[3][-1] == ']' and
                             name[4] == 'resource'
                         ):
@@ -206,8 +211,6 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                             name.append(str(source.metadata.namespace))
                         name.append(str(source.observed.metadata.name))
                         usage = composite.resources['_'.join(name)](apiVersion, 'Usage')
-                        if resource.metadata.namespace:
-                            usage.metadata.namespace = resource.metadata.namespace
                         usage.spec.reason = '\n'.join(dependencies)
                         usage.spec.replayDeletion = True
                         usage.spec.by.apiVersion = resource.apiVersion
@@ -215,9 +218,17 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                         usage.spec.by.resourceRef.name = resource.observed.metadata.name
                         usage.spec.of.apiVersion = source.apiVersion
                         usage.spec.of.kind = source.kind
-                        if source.metadata.namespace:
-                            usage.spec.of.resourceRef.namespace = source.metadata.namespace
                         usage.spec.of.resourceRef.name = source.observed.metadata.name
+                        if not self.crossplane_v1:
+                            if composite.metadata.namespace:
+                                if source.metadata.namespace and source.metadata.namespace != composite.metadata.namespace:
+                                    usage.spec.of.resourceRef.namespace = source.metadata.namespace
+                            elif resource.metadata.namespace:
+                                usage.metadata.namespace = resource.metadata.namespace
+                                if source.metadata.namespace and source.metadata.namespace != resource.metadata.namespace:
+                                    usage.spec.of.resourceRef.namespace = source.metadata.namespace
+                            else:
+                                usage.kind = 'ClusterUsage'
                     for key, dependencies in requireds.items():
                         source = composite.requireds[key[0]][key[1]]
                         name = [resource.name, str(source.kind)]
@@ -225,8 +236,6 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                             name.append(str(source.metadata.namespace))
                         name.append(str(source.metadata.name))
                         usage = composite.resources['_'.join(name)](apiVersion, 'Usage')
-                        if resource.metadata.namespace:
-                            usage.metadata.namespace = resource.metadata.namespace
                         usage.spec.reason = '\n'.join(dependencies)
                         usage.spec.replayDeletion = True
                         usage.spec.by.apiVersion = resource.apiVersion
@@ -234,9 +243,17 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                         usage.spec.by.resourceRef.name = resource.observed.metadata.name
                         usage.spec.of.apiVersion = source.apiVersion
                         usage.spec.of.kind = source.kind
-                        if source.metadata.namespace:
-                            usage.spec.of.resourceRef.namespace = source.metadata.namespace
                         usage.spec.of.resourceRef.name = source.observed.metadata.name
+                        if not self.crossplane_v1:
+                            if composite.metadata.namespace:
+                                if source.metadata.namespace and source.metadata.namespace != composite.metadata.namespace:
+                                    usage.spec.of.resourceRef.namespace = source.metadata.namespace
+                            elif resource.metadata.namespace:
+                                usage.metadata.namespace = resource.metadata.namespace
+                                if source.metadata.namespace and source.metadata.namespace != resource.metadata.namespace:
+                                    usage.spec.of.resourceRef.namespace = source.metadata.namespace
+                            else:
+                                usage.kind = 'ClusterUsage'
 
     def process_unknowns(self, composite):
         unknownResources = []
@@ -300,13 +317,6 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         composite.conditions.ResourcesComposed(reason, message, status)
         if result:
             result(reason, message)
-
-    def process_auto_readies(self, composite):
-        for name, resource in composite.resources:
-            if resource.autoReady or (resource.autoReady is None and composite.autoReady):
-                if resource.ready is None:
-                    if resource.conditions.Ready.status:
-                        resource.ready = True
 
     def trimFullName(self, name):
         name = name.split('.')

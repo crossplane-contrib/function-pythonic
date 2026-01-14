@@ -1,0 +1,720 @@
+
+unhandled:
+  resource:
+    apiVersion: test/v1
+    kind: Unhandled
+  ready: null
+
+condition-ready:
+  resource:
+    apiVersion: test/v1
+    kind: Ready
+    status:
+      conditions:
+      - type: Ready
+        status: 'True'
+  ready: true
+
+condition-not-ready:
+  resource:
+    apiVersion: test/v1
+    kind: Ready
+    status:
+      conditions:
+      - type: Ready
+        status: 'False'
+  ready: null
+
+cluster-role:
+  resource:
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+  ready: true
+
+cluster-role-binding:
+  resource:
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+  ready: true
+
+config-map:
+  resource:
+    apiVersion: v1
+    kind: ConfigMap
+  ready: true
+
+cron-job-suspended:
+  resource:
+    apiVersion: batch/v1
+    kind: CronJob
+    spec:
+      suspend: true
+  ready: true
+
+cron-job-last-execution-succeeded:
+  resource:
+    apiVersion: batch/v1
+    kind: CronJob
+    spec:
+      suspend: false
+    status:
+      lastScheduleTime:   '2024-01-01T10:00:00Z'
+      lastSuccessfulTime: '2024-01-01T10:05:00Z'
+  ready: true
+
+cron-job-is-active:
+  resource:
+    apiVersion: batch/v1
+    kind: CronJob
+    spec:
+      suspend: false
+    status:
+      lastScheduleTime: '2024-01-01T10:00:00Z'
+      active:
+      - name: job-1
+  ready: true
+
+cron-job-last-execution-failed:
+  resource:
+    apiVersion: batch/v1
+    kind: CronJob
+    spec:
+      suspend: false
+    status:
+      lastScheduleTime:   '2024-01-01T10:05:00Z'
+      lastSuccessfulTime: '2024-01-01T10:00:00Z'
+  ready: null
+
+cron-job-never-succeeded:
+  resource:
+    apiVersion: batch/v1
+    kind: CronJob
+    spec:
+      suspend: false
+    status:
+      lastScheduleTime: '2024-01-01T10:00:00Z'
+  ready: null
+
+cron-job-not-yet-scheduled:
+  resource:
+    apiVersion: batch/v1
+    kind: CronJob
+    spec:
+      suspend: false
+  ready: null
+
+daemonset-all-pods-scheduled-and-ready:
+  resource:
+    apiVersion: apps/v1
+    kind: DaemonSet
+    status:
+      desiredNumberScheduled: 5
+      numberReady:            5
+      updatedNumberScheduled: 5
+      numberAvailable:        5
+  ready: true
+
+daemonset-pods-not-ready:
+  resource:
+    apiVersion: apps/v1
+    kind: DaemonSet
+    status:
+      desiredNumberScheduled: 5
+      numberReady:            4
+      updatedNumberScheduled: 5
+      numberAvailable:        5
+  ready: null
+
+daemonset-update-in-progress:
+  resource:
+    apiVersion: apps/v1
+    kind: DaemonSet
+    status:
+      desiredNumberScheduled: 5
+      numberReady:            5
+      updatedNumberScheduled: 4
+      numberAvailable:        5
+  ready: null
+
+daemonset-pods-not-available:
+  resource:
+    apiVersion: apps/v1
+    kind: DaemonSet
+    status:
+      desiredNumberScheduled: 5
+      numberReady:            5
+      updatedNumberScheduled: 5
+      numberAvailable:        4
+  ready: null
+
+daemonset-no-status:
+  resource:
+    apiVersion: apps/v1
+    kind: DaemonSet
+  ready: null
+
+deployment-all-replicas-ready:
+  resource:
+    apiVersion: apps/v1
+    kind: Deployment
+    spec:
+      replicas: 3
+    status:
+      updatedReplicas: 3
+      availableReplicas: 3
+      conditions:
+      - type: Available
+        status: 'True'
+  ready: true
+
+deployment-replicas-not-updated:
+  resource:
+    apiVersion: apps/v1
+    kind: Deployment
+    spec:
+      replicas: 3
+    status:
+      updatedReplicas: 2
+      availableReplicas: 3
+      conditions:
+      - type: Available
+        status: 'True'
+  ready: null
+
+deployment-replicas-not-available:
+  resource:
+    apiVersion: apps/v1
+    kind: Deployment
+    spec:
+      replicas: 3
+    status:
+      updatedReplicas: 3
+      availableReplicas: 2
+      conditions:
+      - type: Available
+        status: 'True'
+  ready: null
+
+deployment-available-condition-false:
+  resource:
+    apiVersion: apps/v1
+    kind: Deployment
+    spec:
+      replicas: 3
+    status:
+      updatedReplicas: 3
+      availableReplicas: 3
+      conditions:
+      - type: Available
+        status: 'False'
+  ready: null
+
+deployment-replicas-no-status:
+  resource:
+    apiVersion: apps/v1
+    kind: Deployment
+    spec:
+      replicas: 3
+  ready: null
+
+deployment-default-replicas-1:
+  resource:
+    apiVersion: apps/v1
+    kind: Deployment
+    status:
+      updatedReplicas: 1
+      availableReplicas: 1
+      conditions:
+      - type: Available
+        status: 'True'
+  ready: True
+
+hpa-scaling-active:
+  resource:
+    apiVersion: autoscaling/v2
+    kind: HorizontalPodAutoscaler
+    status:
+      conditions:
+      - type: ScalingActive
+        status: 'True'
+  ready: true
+
+hpa-scaling-limited:
+  resource:
+    apiVersion: autoscaling/v2
+    kind: HorizontalPodAutoscaler
+    status:
+      conditions:
+      - type: ScalingLimited
+        status: 'True'
+  ready: true
+
+hpa-failed-get-scale:
+  resource:
+    apiVersion: autoscaling/v2
+    kind: HorizontalPodAutoscaler
+    status:
+      conditions:
+      - type: ScalingActive
+        status: 'True'
+      - type: ScalingLimited
+        status: 'True'
+      - type: FailedGetScale
+        status: 'True'
+  ready: null
+
+hpa-failed-update-scale:
+  resource:
+    apiVersion: autoscaling/v2
+    kind: HorizontalPodAutoscaler
+    status:
+      conditions:
+      - type: ScalingActive
+        status: 'True'
+      - type: ScalingLimited
+        status: 'True'
+      - type: FailedUpdateScale
+        status: 'True'
+  ready: null
+
+hpa-failed-get-resource-metric:
+  resource:
+    apiVersion: autoscaling/v2
+    kind: HorizontalPodAutoscaler
+    status:
+      conditions:
+      - type: ScalingActive
+        status: 'True'
+      - type: ScalingLimited
+        status: 'True'
+      - type: FailedGetResourceMetric
+        status: 'True'
+  ready: null
+
+hpa-failed-invalid-selector:
+  resource:
+    apiVersion: autoscaling/v2
+    kind: HorizontalPodAutoscaler
+    status:
+      conditions:
+      - type: ScalingActive
+        status: 'True'
+      - type: ScalingLimited
+        status: 'True'
+      - type: InvalidSelector
+        status: 'True'
+  ready: null
+
+hpa-failed-no-conditions:
+  resource:
+    apiVersion: autoscaling/v2
+    kind: HorizontalPodAutoscaler
+  ready: null
+
+ingress-loadbalancer-assigned:
+  resource:
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    status:
+      loadBalancer:
+        ingress:
+        - ip: 1.2.3.4
+  ready: true
+
+ingress-hostname-assigned:
+  resource:
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    status:
+      loadBalancer:
+        ingress:
+        - hostname: example.com
+  ready: true
+
+ingress-no-loadbalancer:
+  resource:
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    status:
+      loadBalancer: {}
+  ready: null
+
+ingress-no-status:
+  resource:
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+  ready: null
+
+job-completed:
+  resource:
+    apiVersion: batch/v1
+    kind: Job
+    status:
+      conditions:
+      - type: Complete
+        status: 'True'
+  ready: true
+
+job-failed:
+  resource:
+    apiVersion: batch/v1
+    kind: Job
+    status:
+      conditions:
+      - type: Complete
+        status: 'True'
+      - type: Failed
+        status: 'True'
+  ready: null
+
+job-suspended:
+  resource:
+    apiVersion: batch/v1
+    kind: Job
+    status:
+      conditions:
+      - type: Complete
+        status: 'True'
+      - type: Suspended
+        status: 'True'
+  ready: null
+
+job-no-conditions:
+  resource:
+    apiVersion: batch/v1
+    kind: Job
+    status: {}
+  ready: null
+
+job-complete-false:
+  resource:
+    apiVersion: batch/v1
+    kind: Job
+    status:
+      conditions:
+      - type: Complete
+        status: 'False'
+  ready: null
+
+namespace:
+  resource:
+    apiVersion: v1
+    kind: Namespace
+  ready: true
+
+pvc-bound:
+  resource:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    status:
+      phase: Bound
+  ready: true
+
+pvc-lost:
+  resource:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    status:
+      phase: Lost
+  ready: null
+
+pvc-pending:
+  resource:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    status:
+      phase: Pending
+  ready: null
+
+pvc-no-status:
+  resource:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+  ready: null
+
+pod-running-and-ready:
+  resource:
+    apiVersion: v1
+    kind: Pod
+    spec:
+      restartPolicy: Always
+    status:
+      phase: Running
+      conditions:
+      - type: Ready
+        status: 'True'
+  ready: true
+
+pod-succeeded:
+  resource:
+    apiVersion: v1
+    kind: Pod
+    spec:
+      restartPolicy: Never
+    status:
+      phase: Succeeded
+  ready: true
+
+pod-failed:
+  resource:
+    apiVersion: v1
+    kind: Pod
+    spec:
+      restartPolicy: Always
+    status:
+      phase: Failed
+  ready: null
+
+pod-pending:
+  resource:
+    apiVersion: v1
+    kind: Pod
+    spec:
+      restartPolicy: Always
+    status:
+      phase: Pending
+  ready: null
+
+pod-image-pull-back-off:
+  resource:
+    apiVersion: v1
+    kind: Pod
+    spec:
+      restartPolicy: Always
+    status:
+      phase: Running
+      containerStatuses:
+      - state:
+          waiting:
+            reason: ImagePullBackOff
+  ready: null
+
+pod-crash-loop-back-off:
+  resource:
+    apiVersion: v1
+    kind: Pod
+    spec:
+      restartPolicy: Always
+    status:
+      phase: Running
+      containerStatuses:
+      - state:
+          waiting:
+            reason: CrashLoopBackOff
+  ready: null
+
+pod-running-with-on-failure:
+  resource:
+    apiVersion: v1
+    kind: Pod
+    spec:
+      restartPolicy: OnFailure
+    status:
+      phase: Running
+  ready: null
+
+replicaset-all-replicas-available:
+  resource:
+    apiVersion: v1
+    kind: ReplicaSet
+    metadata:
+      generation: 2
+    spec:
+      replicas: 3
+    status:
+      observedGeneration: 2
+      availableReplicas: 3
+  ready: true
+
+replicaset-observed-generation-mismatch:
+  resource:
+    apiVersion: v1
+    kind: ReplicaSet
+    metadata:
+      generation: 3
+    spec:
+      replicas: 3
+    status:
+      observedGeneration: 2
+      availableReplicas: 3
+  ready: null
+
+replicaset-replica-failure:
+  resource:
+    apiVersion: v1
+    kind: ReplicaSet
+    metadata:
+      generation: 1
+    spec:
+      replicas: 3
+    status:
+      observedGeneration: 1
+      availableReplicas: 3
+      conditions:
+      - type: ReplicaFailure
+        status: 'True'
+  ready: null
+
+replicaset-not-enough-available-replicas:
+  resource:
+    apiVersion: v1
+    kind: ReplicaSet
+    metadata:
+      generation: 1
+    spec:
+      replicas: 3
+    status:
+      observedGeneration: 1
+      availableReplicas: 2
+  ready: null
+
+replicaset-default-replicas-1:
+  resource:
+    apiVersion: v1
+    kind: ReplicaSet
+    metadata:
+      generation: 1
+    spec: {}
+    status:
+      observedGeneration: 1
+      availableReplicas: 1
+  ready: true
+
+role:
+  resource:
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: Role
+  ready: true
+
+role-binding:
+  resource:
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+  ready: true
+
+secret:
+  resource:
+    apiVersion: v1
+    kind: Secret
+  ready: true
+
+service-ingress-assigned:
+  resource:
+    apiVersion: v1
+    kind: Service
+    spec:
+      type: LoadBalancer
+    status:
+      loadBalancer:
+        ingress:
+        - ip: 1.2.3.4
+  ready: true
+
+service-no-ingress:
+  resource:
+    apiVersion: v1
+    kind: Service
+    spec:
+      type: LoadBalancer
+    status:
+      loadBalancer: {}
+  ready: null
+
+service-clusterip:
+  resource:
+    apiVersion: v1
+    kind: Service
+    spec:
+      type: ClusterIp
+  ready: true
+
+service-nodeport:
+  resource:
+    apiVersion: v1
+    kind: Service
+    spec:
+      type: NodePort
+  ready: true
+
+service-default:
+  resource:
+    apiVersion: v1
+    kind: Service
+  ready: true
+
+secret:
+  resource:
+    apiVersion: v1
+    kind: ServiceAccount
+  ready: true
+
+statefulset-all-replicas-ready:
+  resource:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    spec:
+      replicas: 3
+    status:
+      readyReplicas: 3
+      currentReplicas: 3
+      currentRevision: myapp-5d8f9c7b
+      updateRevision:  myapp-5d8f9c7b
+  ready: true
+
+statefulset-replicas-not-ready:
+  resource:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    spec:
+      replicas: 3
+    status:
+      readyReplicas: 2
+      currentReplicas: 3
+      currentRevision: myapp-5d8f9c7b
+      updateRevision:  myapp-5d8f9c7b
+  ready: null
+
+statefulset-replicas-update-in-progress:
+  resource:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    spec:
+      replicas: 3
+    status:
+      readyReplicas: 2
+      currentReplicas: 3
+      currentRevision: myapp-5d8f9c7b
+      updateRevision:  myapp-6e9g0d8c
+  ready: null
+
+statefulset-wrong-current-replicas:
+  resource:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    spec:
+      replicas: 3
+    status:
+      readyReplicas: 3
+      currentReplicas: 2
+      currentRevision: myapp-5d8f9c7b
+      updateRevision:  myapp-5d8f9c7b
+  ready: null
+
+statefulset-no-status:
+  resource:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    spec:
+      replicas: 3
+  ready: null
+
+statefulset-default-replicas-1:
+  resource:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    status:
+      readyReplicas: 1
+      currentReplicas: 1
+      currentRevision: myapp-5d8f9c7b
+      updateRevision:  myapp-5d8f9c7b
+  ready: true

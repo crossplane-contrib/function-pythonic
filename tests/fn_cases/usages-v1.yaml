@@ -1,25 +1,15 @@
+v1: true
+
 request:
-  context:
-    _pythonic:
-      pytest:
-        requireds:
-          VPC:
-            apiVersion: ec2.aws.crossplane.io/v1beta1
-            kind: VPC
-            matchName: pytest-vpc
-  extra_resources:
-    VPC:
-      items:
-      - resource:
-          apiVersion: ec2.aws.crossplane.io/v1beta1
-          kind: VPC
+  observed:
+    resources:
+      VPC:
+        resource:
           metadata:
-            name: pytest-vpc
+            name: pytest-0123456
           status:
             atProvider:
               vpcId: vpc-0123456789
-  observed:
-    resources:
       SubnetA:
         resource:
           metadata:
@@ -30,7 +20,9 @@ request:
       class UsagesComposite(BaseComposite):
         def compose(self):
           self.usages = True
-          vpc = self.requireds.VPC('ec2.aws.crossplane.io/v1beta1', 'VPC', name='pytest-vpc')[0]
+          vpc = self.resources.VPC('ec2.aws.crossplane.io/v1beta1', 'VPC')
+          vpc.spec.forProvider.region = 'us-east-1'
+          vpc.spec.forProvider.cidrBlock = '10.0.0.0/16'
           subnet = self.resources.SubnetA('ec2.aws.crossplane.io/v1beta1', 'Subnet')
           subnet.spec.forProvider.region = 'us-east-1'
           subnet.spec.forProvider.vpcId = vpc.status.atProvider.vpcId
@@ -38,22 +30,16 @@ request:
           subnet.spec.forProvider.cidrBlock = '10.0.0.0/20'
 
 response:
-  context:
-    _pythonic:
-      pytest:
-        requireds:
-          VPC:
-            apiVersion: ec2.aws.crossplane.io/v1beta1
-            kind: VPC
-            matchName: pytest-vpc
-  requirements:
-    extra_resources:
-      VPC:
-        api_version: ec2.aws.crossplane.io/v1beta1
-        kind: VPC
-        match_name: pytest-vpc
   desired:
     resources:
+      VPC:
+        resource:
+          apiVersion: ec2.aws.crossplane.io/v1beta1
+          kind: VPC
+          spec:
+            forProvider:
+              region: us-east-1
+              cidrBlock: 10.0.0.0/16
       SubnetA:
         resource:
           apiVersion: ec2.aws.crossplane.io/v1beta1
@@ -64,7 +50,7 @@ response:
               vpcId: vpc-0123456789
               availabilityZone: us-east-1a
               cidrBlock: 10.0.0.0/20
-      SubnetA_VPC_pytest-vpc:
+      SubnetA_VPC_pytest-0123456:
         resource:
           apiVersion: apiextensions.crossplane.io/v1beta1
           kind: Usage
@@ -80,4 +66,4 @@ response:
               apiVersion: ec2.aws.crossplane.io/v1beta1
               kind: VPC
               resourceRef:
-                name: pytest-vpc
+                name: pytest-0123456

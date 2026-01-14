@@ -215,3 +215,4 @@ crossplane/pythonic/__version__.py
 pocs/
 pythonic-packages/
 tests/protobuf/pytest_pb2*
+scripts/.aws-credentials

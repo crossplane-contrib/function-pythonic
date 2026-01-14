@@ -568,39 +568,57 @@ class FieldMessage:
         self._value = value
 
     def __bool__(self):
-        return bool(self._value)
+        return self._value is not _Unknown
 
     def __len__(self):
+        if self._value is _Unknown:
+            return 0
         return len(self._value)
 
     def __contains__(self, key):
+        if self._value is _Unknown:
+            return False
         return key in self._value
 
     def __hash__(self):
+        if self._value is _Unknown:
+            return 0
         return hash(self._value)
 
     def __eq__(self, other):
+        if self._value is _Unknown:
+            return False
         if isinstance(other, FieldMessage):
             return self._value == other._value
         return self._value == other
 
     def __bytes__(self):
+        if self._value is _Unknown:
+            return None
         if isinstance(self._value, str):
             return self._value.encode('utf-8')
         return bytes(self._value)
 
     def __str__(self):
+        if self._value is _Unknown:
+            return None
         if isinstance(self._value, bytes):
             return self._value.decode('utf-8')
         return str(self._value)
 
     def __format__(self, spec=''):
+        if self._value is _Unknown:
+            return None
         return format(self._value, spec)
 
     def __int__(self):
+        if self._value is _Unknown:
+            return None
         return int(self._value)
 
     def __float__(self):
+        if self._value is _Unknown:
+            return None
         return float(self._value)
 
     def _fullName(self, key=None):
@@ -715,6 +733,10 @@ class Value:
                 return len(self._value.list_value.values) + len(self._unknowns)
             case 'ListValue':
                 return len(self._value.values) + len(self._unknowns)
+            case 'string_value':
+                return len(self._value.string_value)
+            case 'bool_value':
+                return 1 if self._value.bool_value else 0
         return 0
 
     def __contains__(self, item):
@@ -1224,13 +1246,14 @@ class Value:
             for key, value in self:
                 if isinstance(value, Value) and len(value):
                     patch = patches[key]
-                    if isinstance(patch, Value) and patch._type == value._type and len(patch):
+                    print(patch.__class__, str(patch))
+                    if isinstance(patch, Value) and patch._kind == value._kind and len(patch):
                         value._patchUnknowns(patch)
         elif self._isList:
             for ix, value in enumerate(self):
                 if isinstance(value, Value) and len(value):
                     patch = patches[ix]
-                    if isinstance(patch, Value) and patch._type == value._type and len(patch):
+                    if isinstance(patch, Value) and patch._kind == value._kind and len(patch):
                         value._patchUnknowns(patch)
 
     def _renderUnknowns(self, trimFullName):

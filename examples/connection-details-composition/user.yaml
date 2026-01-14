@@ -1,0 +1,18 @@
+apiVersion: iam.aws.m.upbound.io/v1beta1
+kind: User
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: user
+  labels:
+    crossplane.io/composite: my-keys
+  namespace: default
+  name: my-keys-12345
+spec:
+  forProvider: {}
+status:
+  atProvider:
+    id: my-user
+  conditions:
+  - type: Ready
+    reason: Created
+    status: 'True'

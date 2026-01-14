@@ -10,4 +10,4 @@ metadata:
     render.crossplane.io/runtime: Development
     render.crossplane.io/runtime-development-target: localhost:9443
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.2.1
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.3.0

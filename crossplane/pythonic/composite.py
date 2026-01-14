@@ -9,8 +9,86 @@ from . import protobuf
 _notset = object()
 
 
+class ConnectionSecret:
+    def __get__(self, composite, objtype=None):
+        if composite.crossplane_v1:
+            return composite.spec.writeConnectionSecretToRef
+        secret = getattr(composite, '_connectionSecret', None)
+        if not secret:
+            secret = protobuf.Map()
+            for key, value in composite.request.input.writeConnectionSecretToRef:
+                secret[key] = value
+            composite._connectionSecret = secret
+        return secret
+
+    def __set__(self, composite, values):
+        if composite.crossplane_v1:
+            if values != composite.spec.writeConnectionSecretToRef:
+                raise NotImplementedError('Connection Secret cannot be set in Crossplane V1')
+            return
+        secret = protobuf.Map()
+        for key, value in values:
+            secret[key] = value
+        composite._connectionSecret = secret
+
+
+class Connection:
+    def __get__(self, composite, objtype=None):
+        connection = getattr(composite, '_connection', None)
+        if not connection:
+            connection = _Connection(composite)
+            composite._connection = connection
+        return connection
+
+    def __set__(self, composite, values):
+        connection = self.__get__(composite)
+        coneection()
+        for key, value in values:
+            connection[key] = value
+
+
+class TTL:
+    def __get__(self, composite, objtype=None):
+        if composite.response.meta.ttl.nanos:
+            return float(composite.response.meta.ttl.seconds) + (float(composite.response.meta.ttl.nanos) / 1000000000.0)
+        return int(composite.response.meta.ttl.seconds)
+
+    def __set__(self, composite, ttl):
+        if isinstance(ttl, int):
+            composite.response.meta.ttl.seconds = ttl
+            composite.response.meta.ttl.nanos = 0
+        elif isinstance(ttl, float):
+            composite.response.meta.ttl.seconds = int(ttl)
+            if ttl.is_integer():
+                composite.response.meta.ttl.nanos = 0
+            else:
+                composite.response.meta.ttl.nanos = int((ttl - int(composite.response.meta.ttl.seconds)) * 1000000000)
+        else:
+            raise ValueError('ttl must be an int or float')
+
+
+class Ready:
+    def __get__(self, composite, objtype=None):
+        ready = composite.desired._parent.ready
+        if ready == fnv1.Ready.READY_TRUE:
+            return True
+        if ready == fnv1.Ready.READY_FALSE:
+            return False
+        return None
+
+    def __set__(self, composite, ready):
+        if ready:
+            ready = fnv1.Ready.READY_TRUE
+        elif ready == None or (isinstance(ready, protobuf.Value) and ready._isUnknown):
+            ready = fnv1.Ready.READY_UNSPECIFIED
+        else:
+            ready = fnv1.Ready.READY_FALSE
+        composite.desired._parent.ready = ready
+
+
 class BaseComposite:
-    def __init__(self, request, single_use, logger):
+    def __init__(self, crossplane_v1, request, single_use, logger):
+        self.crossplane_v1 = crossplane_v1
         self.request = protobuf.Message(None, 'request', request.DESCRIPTOR, request, 'Function Request')
         response = fnv1.RunFunctionResponse(
             meta=fnv1.ResponseMeta(
@@ -40,7 +118,6 @@ class BaseComposite:
         observed = self.request.observed.composite
         desired = self.response.desired.composite
         self.observed = observed.resource
-        self.observed._set_attribute('connection', self.request.observed.composite.connection_details)
         self.desired = desired.resource
         self.apiVersion = self.observed.apiVersion
         self.kind = self.observed.kind
@@ -51,54 +128,10 @@ class BaseComposite:
         self.results = Results(self.response)
         self.events = Results(self.response) # Deprecated, use self.results
 
-    @property
-    def ttl(self):
-        if self.response.meta.ttl.nanos:
-            return float(self.response.meta.ttl.seconds) + (float(self.response.meta.ttl.nanos) / 1000000000.0)
-        return int(self.response.meta.ttl.seconds)
-
-    @ttl.setter
-    def ttl(self, ttl):
-        if isinstance(ttl, int):
-            self.response.meta.ttl.seconds = ttl
-            self.response.meta.ttl.nanos = 0
-        elif isinstance(ttl, float):
-            self.response.meta.ttl.seconds = int(ttl)
-            if ttl.is_integer():
-                self.response.meta.ttl.nanos = 0
-            else:
-                self.response.meta.ttl.nanos = int((ttl - int(self.response.meta.ttl.seconds)) * 1000000000)
-        else:
-            raise ValueError('ttl must be an int or float')
-
-    @property
-    def connection(self):
-        return self.response.desired.composite.connection_details
-
-    @connection.setter
-    def connection(self, connection):
-        self.response.desired.composite.connection_details()
-        for key, value in connection:
-            self.response.desired.composite.connection_details[key] = value
-
-    @property
-    def ready(self):
-        ready = self.desired._parent.ready
-        if ready == fnv1.Ready.READY_TRUE:
-            return True
-        if ready == fnv1.Ready.READY_FALSE:
-            return False
-        return None
-
-    @ready.setter
-    def ready(self, ready):
-        if ready:
-            ready = fnv1.Ready.READY_TRUE
-        elif ready == None or (isinstance(ready, protobuf.Value) and ready._isUnknown):
-            ready = fnv1.Ready.READY_UNSPECIFIED
-        else:
-            ready = fnv1.Ready.READY_FALSE
-        self.desired._parent.ready = ready
+    ttl = TTL()
+    connectionSecret = ConnectionSecret()
+    connection = Connection()
+    ready = Ready()
 
     async def compose(self):
         raise NotImplementedError()
@@ -264,6 +297,14 @@ class Resource:
         self.desired.spec = spec
 
     @property
+    def type(self):
+        return self.desired.type
+
+    @type.setter
+    def type(self, type):
+        self.desired.type = type
+
+    @property
     def data(self):
         return self.desired.data
 
@@ -315,25 +356,43 @@ class Requireds:
 
     def __len__(self):
         names = set()
-        for name, resource in self._composite.request.extra_resources:
-            names.add(name)
-        for name, resource in self._composite.response.requirements.extra_resources:
-            names.add(name)
+        if self._composite.crossplane_v1:
+            for name, resource in self._composite.request.extra_resources:
+                names.add(name)
+            for name, resource in self._composite.response.requirements.extra_resources:
+                names.add(name)
+        else:
+            for name, resource in self._composite.request.required_resources:
+                names.add(name)
+            for name, resource in self._composite.response.requirements.resources:
+                names.add(name)
         return len(names)
 
     def __contains__(self, key):
-        if key in self._composite.request.extra_resources:
-            return True
-        if key in self._composite.response.desired.resources:
-            return True
+        if self._composite.crossplane_v1:
+            if key in self._composite.request.extra_resources:
+                return True
+            if key in self._composite.response.requirements.extra_resources:
+                return True
+        else:
+            if key in self._composite.request.required_resources:
+                return True
+            if key in self._composite.response.requirements.resources:
+                return True
         return False
 
     def __iter__(self):
         names = set()
-        for name, resource in self._composite.request.extra_resources:
-            names.add(name)
-        for name, resource in self._composite.response.requirements.extra_resources:
-            names.add(name)
+        if self._composite.crossplane_v1:
+            for name, resource in self._composite.request.extra_resources:
+                names.add(name)
+            for name, resource in self._composite.response.requirements.extra_resources:
+                names.add(name)
+        else:
+            for name, resource in self._composite.request.required_resources:
+                names.add(name)
+            for name, resource in self._composite.response.requirements.resources:
+                names.add(name)
         for name in sorted(names):
             yield name, self[name]
 
@@ -341,8 +400,12 @@ class Requireds:
 class RequiredResources:
     def __init__(self, composite, name):
         self.name = name
-        self._selector = composite.response.requirements.extra_resources[name]
-        self._resources = composite.request.extra_resources[name]
+        if composite.crossplane_v1:
+            self._selector = composite.response.requirements.extra_resources[name]
+            self._resources = composite.request.extra_resources[name]
+        else:
+            self._selector = composite.response.requirements.resources[name]
+            self._resources = composite.request.required_resources[name]
         self._cache = {}
 
     def __call__(self, apiVersion=_notset, kind=_notset, namespace=_notset, name=_notset, labels=_notset):
@@ -432,6 +495,7 @@ class RequiredResource:
         self.kind = self.observed.kind
         self.metadata = self.observed.metadata
         self.spec = self.observed.spec
+        self.type = self.observed.type
         self.data = self.observed.data
         self.status = self.observed.status
         self.conditions = Conditions(resource)
@@ -723,3 +787,119 @@ class Result:
                 self._result.target = fnv1.Target.TARGET_UNSPECIFIED
             else:
                 self._result.target = fnv1.Target.TARGET_COMPOSITE
+
+
+class _Connection:
+    def __init__(self, composite):
+        self._set_attribute('_composite', composite)
+
+    def _set_attribute(self, key, value):
+        self.__dict__[key] = value
+
+    @property
+    def _resource_name(self):
+        return self._composite.connectionSecret.resourceName or 'connection-secret'
+
+    @property
+    def observed(self):
+        if self._composite.crossplane_v1:
+            return self._composite.response.observed.composite.connection_details
+        data = protobuf.Map()
+        for key, value in self._composite.resources[self._resource_name].observed.data:
+            data[key] = protobuf.B64Decode(value)        
+        return data
+
+    def __getattr__(self, key):
+        return self[key]
+
+    def __getitem__(self, key):
+        if self._composite.crossplane_v1:
+            return self._composite.response.desired.composite.connection_details[key]
+        value = self._composite.resources[self._resource_name].data[key]
+        if value:
+            value = protobuf.B64Decode(value)
+        return value
+
+    def __bool__(self):
+        if self._composite.crossplane_v1:
+            return bool(self._composite.response.desired.composite.connection_details)
+        return bool(self._composite.resources[self._resource_name].data)
+
+    def __len__(self):
+        if self._composite.crossplane_v1:
+            return len(self._composite.response.desired.composite.connection_details)
+        return len(self._composite.resources[self._resource_name].data)
+
+    def __contains__(self, key):
+        if self._composite.crossplane_v1:
+            return key in self._composite.response.desired.composite.connection_details
+
+    def __iter__(self):
+        keys = set()
+        if self._composite.crossplane_v1:
+            for key, value in self._composite.response.desired.composite.connection_details:
+                yield key, value
+        for key, value in self._composite.resources[self._resource_name].data:
+            yield key, protobuf.B64Decode(value)
+
+    def __str__(self):
+        return format(self)
+
+    def __format__(self, spec='yaml'):
+        if self._composite.crossplane_v1:
+            return format(self._composite.response.desired.composite.connection_details, spec)
+        data = protobuf.Map()
+        for key, value in self._composite.resources[self._resource_name].data:
+            data[key] = protobuf.B64Decode(value)
+        return format(data, spec)
+
+    def __call__(self, **kwargs):
+        if self._composite_v1:
+            self._composite.response.desired.composite.connection_details(**kwargs)
+            return
+        del self._composite.resources[self._resource_name]
+        for key, value in kwargs:
+            self[key] = value
+
+    def __setattr__(self, key, value):
+        self[key] = value
+
+    def __setitem__(self, key, value):
+        if not isinstance(value, str):
+            if value is None:
+                return
+            if isinstance(value, (protobuf.FieldMessage, protobuf.Value)):
+                if not value:
+                    return
+            value = str(value)
+        if self._composite.crossplane_v1:
+            self._composite.response.desired.composite.connection_details[key] = value
+            return
+        #if not self._composite.connectionSecret.name:
+        #    return
+        if self._resource_name in self._composite.resources:
+            secret = self._composite.resources[self._resource_name]
+        else:
+            secret = self._composite.resources[self._resource_name]('v1', 'Secret')
+            print(bool(self._composite.connectionSecret.name), len(self._composite.connectionSecret.name))
+            if self._composite.connectionSecret.name and len(self._composite.connectionSecret.name):
+                secret.metadata.name = self._composite.connectionSecret.name
+            if not self._composite.metadata.namespace:
+                if not self._composite.connectionSecret.namespace:
+                    self._composite.results.fatal('ConnectionNoNamespace', 'Cluster scoped XR must specify connection secret namespace')
+                    return
+                secret.metadata.namespace = self._composite.connectionSecret.namespace
+            secret.type = 'connection.crossplane.io/v1alpha1'
+        secret.data[key] = protobuf.B64Encode(value)
+
+    def __delattr__(self, key):
+        del self[key]
+
+    def __delitem__(self, key):
+        if self._composite.crossplane_v1:
+            del self._composite.response.desired.composite.connection_details[key]
+            return
+        if self._resource_name in self._composite.resources:
+            del self._composite.resources[self._resource_name].data[key]
+            if not len(self._composite.resources[self._resource_name].data):
+                del self._composite.resources[self._resource_name]

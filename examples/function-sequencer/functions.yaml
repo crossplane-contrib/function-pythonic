@@ -5,4 +5,4 @@ metadata:
   annotations: 
     render.crossplane.io/runtime: Development
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.2.1
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.3.0

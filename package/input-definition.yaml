@@ -29,6 +29,21 @@ spec:
           step:
             type: string
             description: Optional step name used in logging
+          writeConnectionSecretToRef:
+            type: object
+            properties:
+              resourceName:
+                description: 'Composed resource name to use, default: pythonic-connection-secret'
+                type: string
+              name:
+                description: Name of the connection secret. If not specified, defaults to {xr-name}-connection.
+                type: string
+              namespace:
+                description: |-
+                  Namespace of the connection secret. If not specified for namespaced XRs,
+                  Crossplane will default it to the XR's namespace. For cluster-scoped XRs,
+                  namespace must be explicitly provided.
+                type: string
           parameters:
             type: object
             x-kubernetes-preserve-unknown-fields: true
@@ -70,6 +85,21 @@ spec:
           step:
             type: string
             description: Optional step name used in logging
+          writeConnectionSecretToRef:
+            type: object
+            properties:
+              resourceName:
+                description: 'Composed resource name to use, default: pythonic-connection-secret'
+                type: string
+              name:
+                description: Name of the connection secret. If not specified, defaults to {xr-name}-connection.
+                type: string
+              namespace:
+                description: |-
+                  Namespace of the connection secret. If not specified for namespaced XRs,
+                  Crossplane will default it to the XR's namespace. For cluster-scoped XRs,
+                  namespace must be explicitly provided.
+                type: string
           parameters:
             type: object
             x-kubernetes-preserve-unknown-fields: true

@@ -158,7 +158,7 @@ class Command(command.Command):
         # Collect specified required/extra resources. Sort for stable order when processed.
         requireds = sorted(
             self.collect_resources(self.args.required_resources),
-            key=lambda required: str(resource.metadata.name),
+            key=lambda required: str(required.metadata.name),
         )
 
         # Collect specified connection and credential secrets.
@@ -181,7 +181,7 @@ class Command(command.Command):
         results = protobuf.List()
 
         # Create a function-pythonic function runner used to run pipeline steps.
-        runner = function.FunctionRunner(self.args.debug, self.args.render_unknowns)
+        runner = function.FunctionRunner(self.args.debug, self.args.render_unknowns, self.args.crossplane_v1)
         fatal = False
 
         # Process the composition pipeline steps.

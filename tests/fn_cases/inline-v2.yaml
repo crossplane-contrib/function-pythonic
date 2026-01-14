@@ -2,8 +2,12 @@ request:
   observed:
     composite:
       resource:
+        metadata:
+          namespace: inline-namespace
         spec:
           count: 2
+          writeConnectionSecretToRef:
+            name: inline-v2-connection
     resources:
       sample-access-key-0:
         connection_details:
@@ -14,6 +18,7 @@ request:
     composite: |
       class InlineComposite(BaseComposite):
         def compose(self):
+          self.connectionSecret = self.spec.writeConnectionSecretToRef
           for ix in range(int(self.spec.count)):
             user = f"test-user-{ix}"
             r = self.resources[user]('iam.aws.upbound.io/v1beta1', 'User')
@@ -36,10 +41,6 @@ response:
       resource:
         status:
           dummy: cool-status
-      connection_details:
-        url: http://www.example.com
-        username: test-user-0
-        password: hxt1nwu9vmt@qtb3HVW
     resources:
       test-user-0:
         resource:
@@ -81,3 +82,14 @@ response:
             writeConnectionSecretToRef:
               namespace: crossplane.system
               name: sample-access-key-secret-1
+      connection-secret:
+        resource:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: inline-v2-connection
+          type: connection.crossplane.io/v1alpha1
+          data:
+            password: aHh0MW53dTl2bXRAcXRiM0hWVw==
+            url: aHR0cDovL3d3dy5leGFtcGxlLmNvbQ==
+            username: dGVzdC11c2VyLTA=

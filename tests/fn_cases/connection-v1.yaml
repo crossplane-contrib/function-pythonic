@@ -1,5 +1,12 @@
+v1: true
+
 request:
   observed:
+    composite:
+      resource:
+        spec:
+          writeConnectionSecretToRef:
+            name: connection-v1-connection
     resources:
       AccessKey:
         connection_details:

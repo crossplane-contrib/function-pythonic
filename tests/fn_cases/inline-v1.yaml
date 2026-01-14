@@ -1,0 +1,85 @@
+v1: true
+
+request:
+  observed:
+    composite:
+      resource:
+        spec:
+          count: 2
+    resources:
+      sample-access-key-0:
+        connection_details:
+          username: test-user-0
+          password: hxt1nwu9vmt@qtb3HVW
+  input:
+    step: pytest
+    composite: |
+      class InlineComposite(BaseComposite):
+        def compose(self):
+          for ix in range(int(self.spec.count)):
+            user = f"test-user-{ix}"
+            r = self.resources[user]('iam.aws.upbound.io/v1beta1', 'User')
+            r.metadata.labels['testing.upbound.io/example-name'] = user
+            r.metadata.labels.dummy = r.observed.metadata.labels.dummy or ['foo', 'bar', 'baz'][ix]
+            r = self.resources[f"sample-access-key-{ix}"]('iam.aws.upbound.io/v1beta1', 'AccessKey')
+            r.spec.forProvider.userSelector.matchLabels['testing.upbound.io/example-name'] = user
+            r.spec.writeConnectionSecretToRef.namespace = 'crossplane.system'
+            r.spec.writeConnectionSecretToRef.name = f"sample-access-key-secret-{ix}"
+          connection = self.resources['sample-access-key-0'].connection
+          if connection:
+            self.connection.url = 'http://www.example.com'
+            self.connection.username = connection.username
+            self.connection.password = connection.password
+          self.status.dummy = 'cool-status'
+
+response:
+  desired:
+    composite:
+      resource:
+        status:
+          dummy: cool-status
+      connection_details:
+        url: http://www.example.com
+        username: test-user-0
+        password: hxt1nwu9vmt@qtb3HVW
+    resources:
+      test-user-0:
+        resource:
+          apiVersion: iam.aws.upbound.io/v1beta1
+          kind: User
+          metadata:
+            labels:
+              testing.upbound.io/example-name: test-user-0
+              dummy: foo
+      sample-access-key-0:
+        resource:
+          apiVersion: iam.aws.upbound.io/v1beta1
+          kind: AccessKey
+          spec:
+            forProvider:
+              userSelector:
+                matchLabels:
+                  testing.upbound.io/example-name: test-user-0
+            writeConnectionSecretToRef:
+              namespace: crossplane.system
+              name: sample-access-key-secret-0
+      test-user-1:
+        resource:
+          apiVersion: iam.aws.upbound.io/v1beta1
+          kind: User
+          metadata:
+            labels:
+              testing.upbound.io/example-name: test-user-1
+              dummy: bar
+      sample-access-key-1:
+        resource:
+          apiVersion: iam.aws.upbound.io/v1beta1
+          kind: AccessKey
+          spec:
+            forProvider:
+              userSelector:
+                matchLabels:
+                  testing.upbound.io/example-name: test-user-1
+            writeConnectionSecretToRef:
+              namespace: crossplane.system
+              name: sample-access-key-secret-1

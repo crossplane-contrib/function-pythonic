@@ -27,7 +27,6 @@ spec:
             d.spec.template.spec.containers[0].name = 'app'
             d.spec.template.spec.containers[0].image = self.spec.image
             d.spec.template.spec.containers[0].ports[0].containerPort = 80
-            d.ready = d.conditions.Available.status
 
             s = self.resources.service('v1', 'Service')
             s.metadata.labels = labels
@@ -35,7 +34,6 @@ spec:
             s.spec.ports[0].protocol = 'TCP'
             s.spec.ports[0].port = 8080
             s.spec.ports[0].targetPort = 80
-            s.ready = s.observed.spec.clusterIP
 
             self.status.replicas = d.status.availableReplicas
             self.status.address = s.observed.spec.clusterIP

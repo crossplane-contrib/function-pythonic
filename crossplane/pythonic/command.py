@@ -50,6 +50,11 @@ class Command:
             action='store_true',
             help='Allow oversized protobuf messages',
         )
+        parser.add_argument(
+            '--crossplane-v1',
+            action='store_true',
+            help='Enable Crossplane V1 compatibility mode',
+        )
 
     def __init__(self, args):
         self.args = args

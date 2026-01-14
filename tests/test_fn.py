@@ -2,7 +2,6 @@
 import pathlib
 import pytest
 from crossplane.function.proto.v1 import run_function_pb2 as fnv1
-from google.protobuf import json_format
 
 from crossplane.pythonic import function
 from tests import utils
@@ -16,7 +15,7 @@ fn_cases = sorted([
 
 @pytest.mark.parametrize('fn_case', fn_cases, ids=[path.stem for path in fn_cases])
 @pytest.mark.asyncio
-async def test_run_function(fn_case):
+async def test(fn_case):
     test = utils.yaml_load(fn_case.read_text())
 
     request = fnv1.RunFunctionRequest(
@@ -61,7 +60,7 @@ async def test_run_function(fn_case):
     utils.map_merge(response, test.get('response', {}))
 
     result = utils.message_dict(
-        await function.FunctionRunner(True).RunFunction(request, None)
+        await function.FunctionRunner(True, False, test.get('v1', False)).RunFunction(request, None)
     )
 
     assert result == response

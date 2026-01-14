@@ -3,8 +3,8 @@ request:
     step: pytest
     composite: |
       class InstantiateException(BaseComposite):
-        def __init__(self, request, single_use, logger):
-          super(InstantiateException, self).__init__(request, single_use, logger)
+        def __init__(self, *args, **kwargs):
+          super(InstantiateException, self).__init__(*args, **kwargs)
           foo = bar
 
 response:

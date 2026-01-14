@@ -50,8 +50,8 @@ response:
               cidrBlock: 10.0.0.0/20
       SubnetA_VPC_pytest-0123456:
         resource:
-          apiVersion: apiextensions.crossplane.io/v1beta1
-          kind: Usage
+          apiVersion: protection.crossplane.io/v1beta1
+          kind: ClusterUsage
           spec:
             reason: spec.forProvider.vpcId = status.atProvider.vpcId
             replayDeletion: true

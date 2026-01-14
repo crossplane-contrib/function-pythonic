@@ -57,8 +57,39 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.2.1
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.3.0
 ```
+
+### Crossplane V1
+When running function-pythonic in Crossplane V1, the `--crossplane-v1` command line
+option should be specified. This requires using a Crossplane DeploymentRuntimeConfig.
+```yaml
+apiVersion: pkg.crossplane.io/v1
+kind: Function
+metadata:
+  name: function-pythonic
+spec:
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.3.0
+  runtimeConfigRef:
+    name: function-pythonic
+--
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: function-pythonic
+spec:
+  deploymentTemplate:
+    spec:
+      selector: {}
+      template:
+        spec:
+          containers:
+          - name: package-runtime
+            args:
+            - --debug
+            - --crossplane-v1
+```
+
 ## Composed Resource Dependencies
 
 function-pythonic automatically handles dependencies between composed resources.
@@ -204,9 +235,10 @@ The BaseComposite class provides the following fields for manipulating the Compo
 | self.status | Map | The composite desired and observed status, read from observed if not in desired |
 | self.conditions | Conditions | The composite desired and observed conditions, read from observed if not in desired |
 | self.results | Results | Returned results applied to the Composite and optionally on the Claim |
+| self.connectionSecret | Map | The name, namespace, and resourceName to use when generating the connection secret in Crossplane v2 |
 | self.connection | Map | The composite desired connection detials |
+| self.connection.observed | Map | The composite observed connection detials |
 | self.ready | Boolean | The composite desired ready state |
-| self.observed.connection | Map | The composite observed connection detials |
 
 The BaseComposite also provides access to the following Crossplane Function level features:
 
@@ -253,7 +285,7 @@ Resource class:
 | Resource.usages | Boolean | Generate Crossplane Usages for this resource, default is Composite.autoReady |
 | Resource.autoReady | Boolean | Perform auto ready processing on this resource, default is Composite.autoReady |
 
-### Required Resources (AKA Extra Resources)
+### Required Resources
 
 Creating and accessing required resources is performed using the `BaseComposite.requireds` field.
 `BaseComposite.requireds` is a dictionary of the required resources whose key is the required
@@ -523,7 +555,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.2.1
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.3.0
   runtimeConfigRef:
     name: function-pythonic
 ---

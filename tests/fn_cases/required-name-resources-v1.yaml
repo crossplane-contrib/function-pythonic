@@ -1,3 +1,5 @@
+v1: true
+
 request:
   observed:
     composite:
@@ -25,8 +27,7 @@ request:
     composite: |
       class RequiredsComposite(BaseComposite):
         def compose(self):
-          buckets = self.requireds.bucket('s3.aws.upbound.io/v1beta1', 'Bucket', 'pytest')
-          buckets.matchLabels = {'testing.upbound.io/example-name': 'bucket-notification'}
+          buckets = self.requireds.bucket('s3.aws.upbound.io/v1beta1', 'Bucket', 'pytest', f"my-awesome-{self.spec.environment}-bucket")
           for ix, bucket in enumerate(buckets):
             r = self.resources[f"bucket-configmap-{ix}"]('kubernetes.crossplane.io/v1alpha1', 'Object')
             r.spec.providerConfigRef.name = 'kubernetes'
@@ -47,17 +48,14 @@ response:
             apiVersion: s3.aws.upbound.io/v1beta1
             kind: Bucket
             namespace: pytest
-            matchLabels:
-              testing.upbound.io/example-name: bucket-notification
+            matchName: my-awesome-dev-bucket
   requirements:
     extra_resources:
       bucket:
         api_version: s3.aws.upbound.io/v1beta1
         kind: Bucket
         namespace: pytest
-        match_labels:
-          labels:
-            testing.upbound.io/example-name: bucket-notification
+        match_name: my-awesome-dev-bucket
   desired:
     composite:
       resource:

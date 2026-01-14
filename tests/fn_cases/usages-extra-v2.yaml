@@ -1,0 +1,83 @@
+request:
+  context:
+    _pythonic:
+      pytest:
+        requireds:
+          VPC:
+            apiVersion: ec2.aws.crossplane.io/v1beta1
+            kind: VPC
+            matchName: pytest-vpc
+  required_resources:
+    VPC:
+      items:
+      - resource:
+          apiVersion: ec2.aws.crossplane.io/v1beta1
+          kind: VPC
+          metadata:
+            name: pytest-vpc
+          status:
+            atProvider:
+              vpcId: vpc-0123456789
+  observed:
+    resources:
+      SubnetA:
+        resource:
+          metadata:
+            name: pytest-1234567
+  input:
+    step: pytest
+    composite: |
+      class UsagesComposite(BaseComposite):
+        def compose(self):
+          self.usages = True
+          vpc = self.requireds.VPC('ec2.aws.crossplane.io/v1beta1', 'VPC', name='pytest-vpc')[0]
+          subnet = self.resources.SubnetA('ec2.aws.crossplane.io/v1beta1', 'Subnet')
+          subnet.spec.forProvider.region = 'us-east-1'
+          subnet.spec.forProvider.vpcId = vpc.status.atProvider.vpcId
+          subnet.spec.forProvider.availabilityZone = 'us-east-1a'
+          subnet.spec.forProvider.cidrBlock = '10.0.0.0/20'
+
+response:
+  context:
+    _pythonic:
+      pytest:
+        requireds:
+          VPC:
+            apiVersion: ec2.aws.crossplane.io/v1beta1
+            kind: VPC
+            matchName: pytest-vpc
+  requirements:
+    resources:
+      VPC:
+        api_version: ec2.aws.crossplane.io/v1beta1
+        kind: VPC
+        match_name: pytest-vpc
+  desired:
+    resources:
+      SubnetA:
+        resource:
+          apiVersion: ec2.aws.crossplane.io/v1beta1
+          kind: Subnet
+          spec:
+            forProvider:
+              region: us-east-1
+              vpcId: vpc-0123456789
+              availabilityZone: us-east-1a
+              cidrBlock: 10.0.0.0/20
+      SubnetA_VPC_pytest-vpc:
+        resource:
+          apiVersion: protection.crossplane.io/v1beta1
+          kind: ClusterUsage
+          spec:
+            reason: spec.forProvider.vpcId = status.atProvider.vpcId
+            replayDeletion: true
+            by:
+              apiVersion: ec2.aws.crossplane.io/v1beta1
+              kind: Subnet
+              resourceRef:
+                name: pytest-1234567
+            of:
+              apiVersion: ec2.aws.crossplane.io/v1beta1
+              kind: VPC
+              resourceRef:
+                name: pytest-vpc

@@ -88,7 +88,7 @@ class Command(command.Command):
 
     async def run(self):
         grpc.aio.init_grpc_aio()
-        grpc_runner = function.FunctionRunner(self.args.debug, self.args.render_unknowns)
+        grpc_runner = function.FunctionRunner(self.args.debug, self.args.render_unknowns, self.args.crossplane_v1)
         grpc_server = grpc.aio.server()
         grpcv1.add_FunctionRunnerServiceServicer_to_server(grpc_runner, grpc_server)
         if self.args.insecure:

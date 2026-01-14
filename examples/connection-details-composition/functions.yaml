@@ -3,7 +3,6 @@ kind: Function
 metadata:
   name: function-pythonic
   annotations: 
-    # This tells crossplane beta render to connect to the function locally.
     render.crossplane.io/runtime: Development
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.2,0
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.3.0

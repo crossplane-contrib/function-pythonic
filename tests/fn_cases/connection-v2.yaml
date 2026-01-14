@@ -1,0 +1,71 @@
+request:
+  observed:
+    composite:
+      resource:
+        metadata:
+          namespace: connection-namespace
+        spec:
+          writeConnectionSecretToRef:
+            name: connection-v2-connection
+    resources:
+      AccessKey:
+        connection_details:
+          username: access-key-username
+          password: access-key-password
+  input:
+    step: pytest
+    parameters:
+      suffix: test
+    writeConnectionSecretToRef:
+      name: test
+    composite: |
+      class Test(BaseComposite):
+        def compose(self):
+          self.connectionSecret = self.spec.writeConnectionSecretToRef
+          user = self.resources.User('iam.aws.crossplane.io/v1beta1', 'User')
+          user.externalName = 'pmcnerthney-test'
+          user.spec.forProvider = {}
+          key = self.resources.AccessKey('iam.aws.crossplane.io/v1beta1', 'AccessKey')
+          key.spec.forProvider.userName = user.externalName
+          key.spec.writeConnectionSecretToRef.namespace = 'default'
+          key.spec.writeConnectionSecretToRef.name = 'accesskey-test'
+          self.connection.constant = 'constant-test'
+          self.connection.parameter = self.parameters.suffix
+          for name, value in key.connection:
+            self.connection[f"{name}-{self.parameters.suffix}"] = value
+          self.connection.client_secret = key.connection.client_secret
+
+response:
+  desired:
+    resources:
+      User:
+        resource:
+          apiVersion: iam.aws.crossplane.io/v1beta1
+          kind: User
+          metadata:
+            annotations:
+              crossplane.io/external-name: pmcnerthney-test
+          spec:
+            forProvider: {}
+      AccessKey:
+        resource:
+          apiVersion: iam.aws.crossplane.io/v1beta1
+          kind: AccessKey
+          spec:
+            forProvider:
+              userName: pmcnerthney-test
+            writeConnectionSecretToRef:
+              namespace: default
+              name: accesskey-test
+      connection-secret:
+        resource:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: connection-v2-connection
+          type: connection.crossplane.io/v1alpha1
+          data:
+            constant: Y29uc3RhbnQtdGVzdA==
+            parameter: dGVzdA==
+            password-test: YWNjZXNzLWtleS1wYXNzd29yZA==
+            username-test: YWNjZXNzLWtleS11c2VybmFtZQ==

@@ -4,7 +4,7 @@ request:
       resource:
         spec:
           environment: dev
-  extra_resources:
+  required_resources:
     bucket:
       items:
       - resource:
@@ -48,7 +48,7 @@ response:
             namespace: pytest
             matchName: my-awesome-dev-bucket
   requirements:
-    extra_resources:
+    resources:
       bucket:
         api_version: s3.aws.upbound.io/v1beta1
         kind: Bucket
