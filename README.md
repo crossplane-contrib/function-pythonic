@@ -57,7 +57,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.3.0
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.3.1
 ```
 
 ### Crossplane V1
@@ -69,7 +69,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.3.0
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.3.1
   runtimeConfigRef:
     name: function-pythonic
 --
@@ -555,7 +555,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.3.0
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.3.1
   runtimeConfigRef:
     name: function-pythonic
 ---
