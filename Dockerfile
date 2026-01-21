@@ -9,7 +9,7 @@ RUN \
   rm -rf /root/*.whl /root/.cache && \
   groupadd --gid 2000 pythonic && \
   useradd --uid 2000 --gid pythonic --home-dir /opt/pythonic --create-home --shell /usr/sbin/nologin pythonic && \
-  mkdir --parents /opt/pythonic/.local/lib/python3.13/site-packages && \
+  mkdir --parents /opt/pythonic/.local/lib/python$(echo $PYTHON_VERSION | sed -n -E 's|^(3[.][0-9]+)[.][0-9]+$|\1|p')/site-packages && \
   chown pythonic:pythonic --recursive /opt/pythonic/.local
 
 USER pythonic:pythonic
