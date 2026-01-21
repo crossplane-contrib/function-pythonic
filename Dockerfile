@@ -9,8 +9,8 @@ RUN \
   rm -rf /root/*.whl /root/.cache && \
   groupadd --gid 2000 pythonic && \
   useradd --uid 2000 --gid pythonic --home-dir /opt/pythonic --create-home --shell /usr/sbin/nologin pythonic && \
-  mkdir --parents /opt/pythonic/.local/lib/python3.13/site-packages && \
-  chown pythonic:pythonic --recursive /opt/pythonic/.local
+  mkdir --parents $(HOME=/opt/pythonic python -c 'import site;print(site.USER_SITE)') && \
+  chown pythonic:pythonic --recursive /opt/pythonic
 
 USER pythonic:pythonic
 WORKDIR /opt/pythonic

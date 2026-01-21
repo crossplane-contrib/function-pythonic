@@ -199,7 +199,7 @@ spec:
 EOF
 
 #  package: ghcr.io/iciclespider/function-pythonic:v0.0.0-20260115045752-3c0cf4ebffd2
-#  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.3.0
+#  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.3.1
 
 kubectl apply -f - <<EOF
 apiVersion: pkg.crossplane.io/v1
