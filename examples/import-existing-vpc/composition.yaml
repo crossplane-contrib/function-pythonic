@@ -27,7 +27,7 @@ spec:
             vpc = await self.compose_vpc()
 
           async def compose_vpc(self):
-            vpc = self.resources.VPC('ec2.aws.m.upbound.io/v1beta1', 'VPC')
+            vpc = self.resources.VPC('VPC', 'ec2.aws.m.upbound.io/v1beta1')
             vpc.spec.forProvider(
               region = self.spec.region,
               cidrBlock = self.spec.cidr,

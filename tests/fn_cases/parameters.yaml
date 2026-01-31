@@ -6,7 +6,7 @@ request:
     composite: |
       class Composite(BaseComposite):
         def compose(self):
-          cm = self.resources.ConfigMap('v1', 'ConfigMap')
+          cm = self.resources.ConfigMap('ConfigMap', 'v1')
           cm.data = self.parameters
 
 response:

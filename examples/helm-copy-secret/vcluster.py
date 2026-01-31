@@ -7,15 +7,15 @@ class VClusterComposite(BaseComposite):
         namespace = name
         secret_name = f'vc-{name}'
 
-        release = self.resources.release('helm.crossplane.io/v1beta1', 'Release', name=name)
+        release = self.resources.release('Release', 'helm.crossplane.io/v1beta1', name=name)
         release.spec.rollbackLimit = 1
         release.spec.forProvider.chart.repository = 'https://charts.loft.sh'
         release.spec.forProvider.chart.name = 'vcluster'
         release.spec.forProvider.chart.version = '0.26.0'
         release.spec.forProvider.namespace = namespace
         release.spec.forProvider.values.controlPlane.proxy.extraSANs[0] = f'{name}.{namespace}'
-        vcluster_secret = self.requireds.vcluster_secret('v1', 'Secret', namespace, secret_name)[0]
-        argocd_secret = self.resources.argocd_secret('v1', 'Secret', 'argocd', secret_name)
+        vcluster_secret = self.requireds.vcluster_secret('Secret', 'v1', namespace, secret_name)[0]
+        argocd_secret = self.resources.argocd_secret('Secret', 'v1', 'argocd', secret_name)
         argocd_secret.metadata.labels['argocd.argoproj.io/secret-type'] = 'cluster'
         argocd_secret.type = 'Opaque'
         argocd_secret.data.name = B64Encode(name)

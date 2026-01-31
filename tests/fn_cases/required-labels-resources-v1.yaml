@@ -27,10 +27,10 @@ request:
     composite: |
       class RequiredsComposite(BaseComposite):
         def compose(self):
-          buckets = self.requireds.bucket('s3.aws.upbound.io/v1beta1', 'Bucket', 'pytest')
+          buckets = self.requireds.bucket('Bucket', 's3.aws.upbound.io/v1beta1', 'pytest')
           buckets.matchLabels = {'testing.upbound.io/example-name': 'bucket-notification'}
           for ix, bucket in enumerate(buckets):
-            r = self.resources[f"bucket-configmap-{ix}"]('kubernetes.crossplane.io/v1alpha1', 'Object')
+            r = self.resources[f"bucket-configmap-{ix}"]('Object', 'kubernetes.crossplane.io/v1alpha1')
             r.spec.providerConfigRef.name = 'kubernetes'
             manifest = r.spec.forProvider.manifest
             manifest.apiVersion = 'v1'

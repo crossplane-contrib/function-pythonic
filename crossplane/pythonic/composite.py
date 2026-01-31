@@ -3,6 +3,7 @@ import datetime
 from google.protobuf.duration_pb2 import Duration
 from crossplane.function.proto.v1 import run_function_pb2 as fnv1
 
+from . import auto_ready
 from . import protobuf
 
 
@@ -69,21 +70,22 @@ class TTL:
 
 class Ready:
     def __get__(self, composite, objtype=None):
-        ready = composite.desired._parent.ready
-        if ready == fnv1.Ready.READY_TRUE:
+        if hasattr(composite, '_ready'):
+            return composite._ready
+        if composite.desired._parent.ready == fnv1.Ready.READY_TRUE:
             return True
-        if ready == fnv1.Ready.READY_FALSE:
+        if composite.desired._parent.ready == fnv1.Ready.READY_FALSE:
             return False
         return None
 
     def __set__(self, composite, ready):
+        composite._ready = ready
         if ready:
-            ready = fnv1.Ready.READY_TRUE
-        elif ready == None or (isinstance(ready, protobuf.Value) and ready._isUnknown):
-            ready = fnv1.Ready.READY_UNSPECIFIED
+            composite.desired._parent.ready = fnv1.Ready.READY_TRUE
+        elif ready is None:
+            composite.desired._parent.ready = fnv1.Ready.READY_UNSPECIFIED
         else:
-            ready = fnv1.Ready.READY_FALSE
-        composite.desired._parent.ready = ready
+            composite.desired._parent.ready = fnv1.Ready.READY_FALSE
 
 
 class BaseComposite:
@@ -111,9 +113,9 @@ class BaseComposite:
         self.environment = self.context['apiextensions.crossplane.io/environment']
         self.requireds = Requireds(self)
         self.resources = Resources(self)
-        self.unknownsFatal = True
         self.autoReady = True
         self.usages = False
+        self.unknownsFatal = False
 
         observed = self.request.observed.composite
         desired = self.response.desired.composite
@@ -231,6 +233,7 @@ class Resources:
 
 class Resource:
     def __init__(self, composite, name):
+        self._composite = composite
         self.name = name
         observed = composite.request.observed.resources[name]
         desired = composite.response.desired.resources[name]
@@ -238,16 +241,22 @@ class Resource:
         self.desired = desired.resource
         self.conditions = Conditions(observed)
         self.connection = observed.connection_details
-        self.unknownsFatal = None
         self.autoReady = None
         self.usages = None
+        self.unknownsFatal = None
 
-    def __call__(self, apiVersion=_notset, kind=_notset, namespace=_notset, name=_notset):
+    def __call__(self, kind=_notset, apiVersion=_notset, namespace=_notset, name=_notset):
         self.desired()
+        if kind != _notset:
+            # Allow for apiVersion in the first arg and kind in the second arg
+            if '/' in kind or kind == 'v1':
+                if apiVersion != _notset:
+                    self.kind = apiVersion
+                apiVersion = kind
+            else:
+                self.kind = kind
         if apiVersion != _notset:
             self.apiVersion = apiVersion
-        if kind != _notset:
-            self.kind = kind
         if namespace != _notset:
             self.metadata.namespace = namespace
         if name != _notset:
@@ -272,9 +281,12 @@ class Resource:
 
     @property
     def externalName(self):
-        if 'crossplane.io/external-name' in self.metadata.annotations:
-            return self.metadata.annotations['crossplane.io/external-name']
-        return self.observed.metadata.annotations['crossplane.io/external-name']
+        name = self.metadata.annotations['crossplane.io/external-name']
+        if not name:
+            name = self.observed.metadata.annotations['crossplane.io/external-name']
+            if name:
+                self.externalName = name
+        return name
 
     @externalName.setter
     def externalName(self, name):
@@ -296,6 +308,7 @@ class Resource:
     def spec(self, spec):
         self.desired.spec = spec
 
+    # Used by Secret:v1
     @property
     def type(self):
         return self.desired.type
@@ -318,23 +331,60 @@ class Resource:
 
     @property
     def ready(self):
-        ready = self.desired._parent.ready
-        if ready == fnv1.Ready.READY_TRUE:
-            return True
-        if ready == fnv1.Ready.READY_FALSE:
-            return False
-        return None
+        if not hasattr(self, '_ready'):
+            if self.desired._parent.ready == fnv1.Ready.READY_TRUE:
+                self._ready =  True
+            elif self.desired._parent.ready == fnv1.Ready.READY_FALSE:
+                self._ready = False
+            else:
+                self._ready = None
+                if self.autoReady or (self.autoReady is None and self._composite.autoReady):
+                    ready = auto_ready.resource_ready(self)
+                    if ready:
+                        self._ready = ready
+                        self.desired._parent.ready = fnv1.Ready.READY_TRUE
+        return self._ready
 
     @ready.setter
     def ready(self, ready):
+        self._ready = ready
         if ready:
-            ready = fnv1.Ready.READY_TRUE
-        elif ready == None or (isinstance(ready, protobuf.Value) and ready._isUnknown):
-            ready = fnv1.Ready.READY_UNSPECIFIED
+            self.desired._parent.ready = fnv1.Ready.READY_TRUE
+        elif ready is None:
+            self.desired._parent.ready = fnv1.Ready.READY_UNSPECIFIED
         else:
-            ready = fnv1.Ready.READY_FALSE
-        self.desired._parent.ready = ready
+            self.desired._parent.ready = fnv1.Ready.READY_FALSE
 
+    def setReadyCondition(self, type='Ready'):
+        condition = self.conditions[type]
+        if condition.status:
+            self.ready = self.observed.metadata.name
+        else:
+            error = f"not{type}Condition"
+            if condition.reason:
+                self.ready = self.status[error][condition.reason]
+            else:
+                self.ready = self.status[error]
+
+    def addDependency(self, resource, field=_notset):
+        if field is _notset:
+            field = resource.ready
+            if field is None:
+                field = auto_ready.resource_ready(resource)
+                if field is None:
+                    field = False
+                resource.ready = field
+        elif field is None:
+            field = True
+        if not isinstance(field, (protobuf.FieldMessage, protobuf.Value)):
+            if field:
+                field = resource.observed.metadata.name
+            else:
+                if not resource.observed.metadata.name:
+                    field = resource.observed.metadata.name
+                else:
+                    field = resource.status.notReady
+        self.metadata.annotations[f"Dependency{resource.name}"] = field
 
 class Requireds:
     def __init__(self, composite):
@@ -408,12 +458,18 @@ class RequiredResources:
             self._resources = composite.request.required_resources[name]
         self._cache = {}
 
-    def __call__(self, apiVersion=_notset, kind=_notset, namespace=_notset, name=_notset, labels=_notset):
+    def __call__(self, kind=_notset, apiVersion=_notset, namespace=_notset, name=_notset, labels=_notset):
         self._selector()
+        if kind != _notset:
+            # Allow for apiVersion in the first arg and kind in the second arg
+            if '/' in kind or kind == 'v1':
+                if apiVersion != _notset:
+                    self.kind = apiVersion
+                apiVersion = kind
+            else:
+                self.kind = kind
         if apiVersion != _notset:
             self.apiVersion = apiVersion
-        if kind != _notset:
-            self.kind = kind
         if namespace != _notset:
             self.namespace = namespace
         if name != _notset:
@@ -802,60 +858,36 @@ class _Connection:
 
     @property
     def observed(self):
-        if self._composite.crossplane_v1:
-            return self._composite.response.observed.composite.connection_details
-        data = protobuf.Map()
-        for key, value in self._composite.resources[self._resource_name].observed.data:
-            data[key] = protobuf.B64Decode(value)        
-        return data
+        return self._composite.response.observed.composite.connection_details
 
     def __getattr__(self, key):
         return self[key]
 
     def __getitem__(self, key):
-        if self._composite.crossplane_v1:
-            return self._composite.response.desired.composite.connection_details[key]
-        value = self._composite.resources[self._resource_name].data[key]
-        if value:
-            value = protobuf.B64Decode(value)
-        return value
+        return self._composite.response.desired.composite.connection_details[key]
 
     def __bool__(self):
-        if self._composite.crossplane_v1:
-            return bool(self._composite.response.desired.composite.connection_details)
-        return bool(self._composite.resources[self._resource_name].data)
+        return bool(self._composite.response.desired.composite.connection_details)
 
     def __len__(self):
-        if self._composite.crossplane_v1:
-            return len(self._composite.response.desired.composite.connection_details)
-        return len(self._composite.resources[self._resource_name].data)
+        return len(self._composite.response.desired.composite.connection_details)
 
     def __contains__(self, key):
-        if self._composite.crossplane_v1:
-            return key in self._composite.response.desired.composite.connection_details
+        return key in self._composite.response.desired.composite.connection_details
 
     def __iter__(self):
-        keys = set()
-        if self._composite.crossplane_v1:
-            for key, value in self._composite.response.desired.composite.connection_details:
-                yield key, value
-        for key, value in self._composite.resources[self._resource_name].data:
-            yield key, protobuf.B64Decode(value)
+        for key, value in self._composite.response.desired.composite.connection_details:
+            yield key, value
 
     def __str__(self):
         return format(self)
 
     def __format__(self, spec='yaml'):
-        if self._composite.crossplane_v1:
-            return format(self._composite.response.desired.composite.connection_details, spec)
-        data = protobuf.Map()
-        for key, value in self._composite.resources[self._resource_name].data:
-            data[key] = protobuf.B64Decode(value)
-        return format(data, spec)
+        return format(self._composite.response.desired.composite.connection_details, spec)
 
     def __call__(self, **kwargs):
+        self._composite.response.desired.composite.connection_details(**kwargs)
         if self._composite_v1:
-            self._composite.response.desired.composite.connection_details(**kwargs)
             return
         del self._composite.resources[self._resource_name]
         for key, value in kwargs:
@@ -872,16 +904,13 @@ class _Connection:
                 if not value:
                     return
             value = str(value)
-        if self._composite.crossplane_v1:
-            self._composite.response.desired.composite.connection_details[key] = value
+        self._composite.response.desired.composite.connection_details[key] = value
+        if self._composite.crossplane_v1 or not self._composite.connectionSecret.name:
             return
-        #if not self._composite.connectionSecret.name:
-        #    return
         if self._resource_name in self._composite.resources:
             secret = self._composite.resources[self._resource_name]
         else:
             secret = self._composite.resources[self._resource_name]('v1', 'Secret')
-            print(bool(self._composite.connectionSecret.name), len(self._composite.connectionSecret.name))
             if self._composite.connectionSecret.name and len(self._composite.connectionSecret.name):
                 secret.metadata.name = self._composite.connectionSecret.name
             if not self._composite.metadata.namespace:
@@ -896,8 +925,8 @@ class _Connection:
         del self[key]
 
     def __delitem__(self, key):
+        del self._composite.response.desired.composite.connection_details[key]
         if self._composite.crossplane_v1:
-            del self._composite.response.desired.composite.connection_details[key]
             return
         if self._resource_name in self._composite.resources:
             del self._composite.resources[self._resource_name].data[key]

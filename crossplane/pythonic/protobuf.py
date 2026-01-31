@@ -37,21 +37,29 @@ def Unknown():
 
 def Yaml(string, readOnly=None):
     if isinstance(string, (FieldMessage, Value)):
+        if not string:
+            return string
         string = str(string)
     return Value(None, None, yaml.safe_load(string), readOnly)
 
 def Json(string, readOnly=None):
     if isinstance(string, (FieldMessage, Value)):
+        if not string:
+            return string
         string = str(string)
     return Value(None, None, json.loads(string), readOnly)
 
 def B64Encode(string):
     if isinstance(string, (FieldMessage, Value)):
+        if not string:
+            return string
         string = str(string)
     return base64.b64encode(string.encode('utf-8')).decode('utf-8')
 
 def B64Decode(string):
     if isinstance(string, (FieldMessage, Value)):
+        if not string:
+            return string
         string = str(string)
     return base64.b64decode(string.encode('utf-8')).decode('utf-8')
 
@@ -679,15 +687,28 @@ class Value:
     def _set_attribute(self, key, value):
         self.__dict__[key] = value
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+    def __aenter__(self):
+        return self
+
+    def __aexit__(self, exc_type, exc_value, traceback):
+        pass
+
     def __getattr__(self, key):
         return self[key]
 
     def __getitem__(self, key):
         key = self._validate_key(key)
-        if key in self._cache:
-            return self._cache[key]
-        if key in self._unknowns:
-            return self._unknowns[key]
+        if key != append:
+            if key in self._cache:
+                return self._cache[key]
+            if key in self._unknowns:
+                return self._unknowns[key]
         if isinstance(key, str):
             match self._kind:
                 case 'struct_value':
@@ -701,14 +722,26 @@ class Value:
         elif isinstance(key, int):
             match self._kind:
                 case 'list_value':
+                    if key < 0:
+                        key = len(self._value.list_value.values) + key
+                        if key < 0:
+                            key = 0
                     if key < len(self._value.list_value.values):
                         value = self._value.list_value.values[key]
                     else:
+                        if key == append:
+                            key = len(self._value.list_value.values)
                         value = _Unknown
                 case 'ListValue':
+                    if key < 0:
+                        key = len(self._value.values) + key
+                        if key < 0:
+                            key = 0
                     if key < len(self._value.values):
                         value = self._value.values[key]
                     else:
+                        if key == append:
+                            key = len(self._value.values)
                         value = _Unknown
                 case 'Unknown':
                     value = _Unknown
@@ -1246,7 +1279,6 @@ class Value:
             for key, value in self:
                 if isinstance(value, Value) and len(value):
                     patch = patches[key]
-                    print(patch.__class__, str(patch))
                     if isinstance(patch, Value) and patch._kind == value._kind and len(patch):
                         value._patchUnknowns(patch)
         elif self._isList:

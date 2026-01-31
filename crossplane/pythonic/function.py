@@ -9,7 +9,6 @@ import sys
 import grpc
 from crossplane.function.proto.v1 import run_function_pb2 as fnv1
 from crossplane.function.proto.v1 import run_function_pb2_grpc as grpcv1
-from . import auto_ready
 from .. import pythonic
 
 logger = logging.getLogger(__name__)
@@ -110,7 +109,13 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         iteration = int(step.iteration) + 1
         step.iteration = iteration
         composite.context.iteration = iteration
-        logger.debug(f"Starting compose, {ordinal(len(composite.context._pythonic))} step, {ordinal(iteration)} pass")
+        if iteration == 1 and not logger.isEnabledFor(logging.DEBUG):
+            if len(composite.context._pythonic) == 1:
+                logger.info('Starting compose')
+            else:
+                logger.info(f"Starting compose, {ordinal(len(composite.context._pythonic))} step")
+        else:
+            logger.debug(f"Starting compose, {ordinal(len(composite.context._pythonic))} step, {ordinal(iteration)} pass")
 
         try:
             result = composite.compose()
@@ -120,11 +125,13 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
             return self.fatal(request, logger, 'Compose', e)
 
         if requireds := self.get_requireds(step, composite):
-            logger.info(f"Requireds requested: {','.join(requireds)}")
+            logger.debug(f"Requireds requested: {','.join(requireds)}")
         else:
             self.process_usages(composite)
             self.process_unknowns(composite)
-            auto_ready.process(composite)
+            # Perform auto ready on all resources.
+            for name, resource in composite.resources:
+                resource.ready
             logger.info('Completed compose')
 
         return composite.response._message
@@ -322,9 +329,11 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         name = name.split('.')
         for values in (
                 ('request', 'observed', 'composite', 'resource'),
+                ('response', 'desired', 'composite', 'resource'),
                 ('request', 'observed', 'resources', None, 'resource'),
-                ('request', 'extra_resources', None, 'items', None, 'resource'),
                 ('response', 'desired', 'resources', None, 'resource'),
+                ('request', 'required_resources', None, 'items', None, 'resource'),
+                ('request', 'extra_resources', None, 'items', None, 'resource'),
         ):
             if len(values) < len(name):
                 ix = 0

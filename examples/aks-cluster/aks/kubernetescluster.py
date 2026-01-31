@@ -6,7 +6,7 @@ class KubernetesClusterComposite(BaseComposite):
         self.logger.info(f"Composing AKS cluster {self.metadata.name}")
         
         aks = self.resources.KubernetesCluster(
-            'containerservice.azure.upbound.io/v1beta2', 'KubernetesCluster'
+            'KubernetesCluster', 'containerservice.azure.upbound.io/v1beta2'
         )
         aks.metadata.name = self.metadata.name
         aks.metadata.labels = labels

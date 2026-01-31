@@ -1,0 +1,53 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: deployment
+  generateName: my-app-
+  labels:
+    crossplane.io/composite: my-app
+    example.crossplane.io/app: my-app
+  namespace: default
+  name: my-app-01234
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      example.crossplane.io/app: my-app
+  template:
+    metadata:
+      labels:
+        example.crossplane.io/app: my-app
+    spec:
+      containers:
+      - image: nginx
+        name: app
+        ports:
+        - containerPort: 80
+status:
+  availableReplicas: 2
+  updatedReplicas: 2
+  conditions:
+  - type: Available
+    status: 'True'
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: service
+  generateName: my-app-
+  labels:
+    crossplane.io/composite: my-app
+    example.crossplane.io/app: my-app
+  namespace: default
+  name: my-app-12345
+spec:
+  clusterIP: 1.2.3.4
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 80
+  selector:
+    example.crossplane.io/app: my-app

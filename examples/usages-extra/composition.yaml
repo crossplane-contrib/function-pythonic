@@ -18,8 +18,8 @@ spec:
         class UsagesComposite(BaseComposite):
           def compose(self):
             self.usages = True
-            vpc = self.requireds.VPC('ec2.aws.crossplane.io/v1beta1', 'VPC', name='usages-vpc')[0]
-            subnet = self.resources.SubnetA('ec2.aws.crossplane.io/v1beta1', 'Subnet')
+            vpc = self.requireds.VPC('VPC', 'ec2.aws.crossplane.io/v1beta1', name='usages-vpc')[0]
+            subnet = self.resources.SubnetA('Subnet', 'ec2.aws.crossplane.io/v1beta1')
             subnet.spec.forProvider.region = 'us-east-1'
             subnet.spec.forProvider.vpcId = vpc.status.atProvider.vpcId
             subnet.spec.forProvider.availabilityZone = 'us-east-1a'

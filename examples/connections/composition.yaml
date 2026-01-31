@@ -23,7 +23,7 @@ spec:
       composite: |
         class Composite(BaseComposite):
           def compose(self):
-            rds = self.resources.rds('rds.aws.upbound.io/v1beta1', 'Instance')
+            rds = self.resources.rds('Instance', 'rds.aws.upbound.io/v1beta1')
             rds.spec.forProvider.name = 'pythonic-example'
             rds.spec.writeConnectionSecretToRef.namespace = 'default'
             rds.spec.writeConnectionSecretToRef.name = 'rds-connection'
