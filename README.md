@@ -236,8 +236,8 @@ The BaseComposite class provides the following fields for manipulating the Compo
 | self.conditions | Conditions | The composite desired and observed conditions, read from observed if not in desired |
 | self.results | Results | Returned results applied to the Composite and optionally on the Claim |
 | self.connectionSecret | Map | The name, namespace, and resourceName to use when generating the connection secret in Crossplane v2 |
-| self.connection | Map | The composite desired connection detials |
-| self.connection.observed | Map | The composite observed connection detials |
+| self.connection | Map | The composite desired connection details |
+| self.connection.observed | Map | The composite observed connection details |
 | self.ready | Boolean | The composite desired ready state |
 
 The BaseComposite also provides access to the following Crossplane Function level features:
