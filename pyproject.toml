@@ -19,7 +19,7 @@ dynamic = ["version"]
 dependencies = [
   "crossplane-function-sdk-python==0.11.0",
   "inflect==7.5.0",
-  "kr8s==0.20.14",
+  "kr8s==0.20.15",
   "pyyaml==6.0.3",
 ]
 
