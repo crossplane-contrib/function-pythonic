@@ -17,6 +17,9 @@ tests = sorted(utils.yaml_load((pathlib.Path(__file__).parent / 'test_auto_ready
 @pytest.mark.parametrize('id,test', tests, ids=[test[0] for test in tests])
 def test(id, test):
     resource = test['resource']
+    if 'metadata' not in resource:
+        resource['metadata'] = {}
+    resource['metadata']['name'] = id
     request = fnv1.RunFunctionRequest(
         observed=fnv1.State(
             resources={
@@ -37,8 +40,13 @@ def test(id, test):
         ),
     )
     composite_test = composite.BaseComposite(False, request, False, logger)
-    auto_ready.process(composite_test)
-    assert test['ready'] == composite_test.resources[id].ready
+    ready = composite_test.resources[id].ready
+    if ready is None:
+        message = 'Ready is not set'
+    else:
+        message = f"Ready is {ready._fullName()}"
+        ready = bool(ready)
+    assert test['ready'] == ready, message
 
 
 def test_abstract():

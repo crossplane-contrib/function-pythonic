@@ -34,6 +34,13 @@ class Command:
             help='Width of the logger name in the log output, default 40.',
         )
         parser.add_argument(
+            '--logger-level',
+            action='append',
+            default=[],
+            metavar='LOGGER=LEVEL',
+            help='Logger level, for example: botocore.hooks=INFO',
+        )
+        parser.add_argument(
             '--python-path',
             action='append',
             default=[],
@@ -70,6 +77,11 @@ class Command:
         logger = logging.getLogger()
         logger.handlers = [handler]
         logger.setLevel(logging.DEBUG if self.args.debug else logging.INFO)
+        for logger_level in self.args.logger_level:
+            for logger_level in logger_level.split(','):
+                logger_level = logger_level.split('=')
+                if len(logger_level) == 2:
+                    logging.getLogger(logger_level[0]).setLevel(logger_level[1].upper())
 
         for path in reversed(self.args.python_path):
             sys.path.insert(0, str(pathlib.Path(path).expanduser().resolve()))

@@ -30,11 +30,12 @@ request:
       apiVersion = 'dbforpostgresql.azure.upbound.io/v1beta1'
       class UnknownsFatalComposite(BaseComposite):
         def compose(self):
+          self.unknownsFatal = True
           self.ttl = (5 * 60) + 30
-          s = self.resources.flexServer(apiVersion, 'FlexibleServer')
+          s = self.resources.flexServer('FlexibleServer', apiVersion)
           s.spec.providerConfigRef.name = 'my-provider-cfg'
           s.spec.forProvider.storageMb = 32768
-          c = self.resources.flexServerConfig(apiVersion, 'FlexibleServerConfiguration')
+          c = self.resources.flexServerConfig('FlexibleServerConfiguration', apiVersion)
           c.spec.providerConfigRef.name = 'my-provider-cfg'
           c.spec.forProvider.serverId = s.status.atProvider.id
 

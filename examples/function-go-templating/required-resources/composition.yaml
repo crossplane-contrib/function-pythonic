@@ -17,9 +17,9 @@ spec:
       composite: |
         class Composite(BaseComposite):
           def compose(self):
-            buckets = self.requireds.bucket('s3.aws.upbound.io/v1beta1', 'Bucket', name=f"my-awesome-{self.spec.environment}-bucket")
+            buckets = self.requireds.bucket('Bucket', 's3.aws.upbound.io/v1beta1', name=f"my-awesome-{self.spec.environment}-bucket")
             for ix, bucket in enumerate(buckets):
-              r = self.resources[f"bucket-configmap-{ix}"]('kubernetes.crossplane.io/v1alpha1', 'Object')
+              r = self.resources[f"bucket-configmap-{ix}"]('Object', 'kubernetes.crossplane.io/v1alpha1')
               r.spec.providerConfigRef.name = 'kubernetes'
               manifest = r.spec.forProvider.manifest
               manifest.apiVersion = 'v1'

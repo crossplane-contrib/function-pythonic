@@ -19,11 +19,11 @@ spec:
           def compose(self):
             self.connectionSecret = self.spec.writeConnectionSecretToRef
 
-            user = self.resources.user('iam.aws.m.upbound.io/v1beta1', 'User')
+            user = self.resources.user('User', 'iam.aws.m.upbound.io/v1beta1')
             user.spec.forProvider = {}
 
             for ix in range(2):
-              key = self.resources[f"access-key-{ix}"]('iam.aws.m.upbound.io/v1beta1', 'AccessKey')
+              key = self.resources[f"access-key-{ix}"]('AccessKey', 'iam.aws.m.upbound.io/v1beta1')
               key.spec.forProvider.user = user.status.atProvider.id
               key.spec.writeConnectionSecretToRef.name = f"{self.metadata.name}-accesskey-{ix}"
               self.connection[f"user-{ix}"] = key.connection.username

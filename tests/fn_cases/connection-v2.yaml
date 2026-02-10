@@ -22,10 +22,10 @@ request:
       class Test(BaseComposite):
         def compose(self):
           self.connectionSecret = self.spec.writeConnectionSecretToRef
-          user = self.resources.User('iam.aws.crossplane.io/v1beta1', 'User')
+          user = self.resources.User('User', 'iam.aws.crossplane.io/v1beta1')
           user.externalName = 'pmcnerthney-test'
           user.spec.forProvider = {}
-          key = self.resources.AccessKey('iam.aws.crossplane.io/v1beta1', 'AccessKey')
+          key = self.resources.AccessKey('AccessKey', 'iam.aws.crossplane.io/v1beta1')
           key.spec.forProvider.userName = user.externalName
           key.spec.writeConnectionSecretToRef.namespace = 'default'
           key.spec.writeConnectionSecretToRef.name = 'accesskey-test'
@@ -37,6 +37,12 @@ request:
 
 response:
   desired:
+    composite:
+      connection_details:
+        constant: constant-test
+        parameter: test
+        password-test: access-key-password
+        username-test: access-key-username
     resources:
       User:
         resource:

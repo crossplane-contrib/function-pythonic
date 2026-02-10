@@ -18,6 +18,6 @@ spec:
         class Composite(BaseComposite):
           def compose(self):
             for ix in range(int(self.spec.count)):
-              r = self.resources[f"test-xr-{ix}"]('example.crossplane.io/v1beta1', 'XR')
+              r = self.resources[f"test-xr-{ix}"]('XR', 'example.crossplane.io/v1beta1')
               r.spec.compositionRef.name = 'example-recursive-real'
               r.spec.region = f"us-west-{ix+1}"

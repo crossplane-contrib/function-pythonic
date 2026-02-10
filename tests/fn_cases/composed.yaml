@@ -9,6 +9,8 @@ request:
     resources:
       flexServer:
         resource:
+          metadata:
+            name: pytest
           status:
             atProvider:
               id: abcdef
@@ -24,10 +26,10 @@ request:
       class ComposedComposite(BaseComposite):
         def compose(self):
           self.ttl = (5 * 60) + 30
-          s = self.resources.flexServer(apiVersion, 'FlexibleServer')
+          s = self.resources.flexServer('FlexibleServer', apiVersion)
           s.spec.providerConfigRef.name = 'my-provider-cfg'
           s.spec.forProvider.storageMb = 32768
-          c = self.resources.flexServerConfig(apiVersion, 'FlexibleServerConfiguration')
+          c = self.resources.flexServerConfig('FlexibleServerConfiguration', apiVersion)
           c.spec.providerConfigRef.name = 'my-provider-cfg'
           c.spec.forProvider.serverId = s.status.atProvider.id
 

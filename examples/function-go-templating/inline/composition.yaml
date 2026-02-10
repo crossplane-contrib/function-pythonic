@@ -21,10 +21,10 @@ spec:
           def compose(self):
             for ix in range(int(self.spec.count)):
               user = f"test-user-{ix}"
-              r = self.resources[user]('iam.aws.upbound.io/v1beta1', 'User')
+              r = self.resources[user]('User', 'iam.aws.upbound.io/v1beta1')
               r.metadata.labels['testing.upbound.io/example-name'] = user
               r.metadata.labels.dummy = r.observed.metadata.labels.dummy or random.choice(['foo', 'bar', 'baz'])
-              r = self.resources[f"sample-access-key-{ix}"]('iam.aws.upbound.io/v1beta1', 'AccessKey')
+              r = self.resources[f"sample-access-key-{ix}"]('AccessKey', 'iam.aws.upbound.io/v1beta1')
               r.spec.forProvider.userSelector.matchLabels['testing.upbound.io/example-name'] = user
               r.spec.writeConnectionSecretToRef.namespace = 'crossplane.system'
               r.spec.writeConnectionSecretToRef.name = f"sample-access-key-secret-{ix}"

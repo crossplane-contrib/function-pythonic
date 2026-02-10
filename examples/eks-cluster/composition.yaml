@@ -20,7 +20,7 @@ spec:
           def compose(self):
             self.usages = True
 
-            v = self.resources.VPC('ec2.aws.crossplane.io/v1beta1', 'VPC')
+            v = self.resources.VPC('VPC', 'ec2.aws.crossplane.io/v1beta1')
             v.spec.forProvider.region = self.spec.cluster.region
             v.spec.forProvider.enableDnsHostNames = True
             v.spec.forProvider.enableDnsSupport = True
@@ -31,11 +31,11 @@ spec:
             publicTableId, publicSubnetIds = self.compose_network(
               True, '10.0.0.0/20', '10.0.16.0/20', '10.0.32.0/20',
             )
-            g = self.resources.InternetGateway('ec2.aws.crossplane.io/v1beta1', 'InternetGateway')
+            g = self.resources.InternetGateway('InternetGateway', 'ec2.aws.crossplane.io/v1beta1')
             g.spec.forProvider.region = self.spec.cluster.region
             g.spec.forProvider.vpcId = self.status.vpcId
             g.spec.forProvider.tags = self.tags(Name=self.spec.cluster.name)
-            r = self.resources.RoutePublic('ec2.aws.crossplane.io/v1alpha1', 'Route').spec.forProvider
+            r = self.resources.RoutePublic('Route', 'ec2.aws.crossplane.io/v1alpha1').spec.forProvider
             r.region = self.spec.cluster.region
             r.routeTableId = publicTableId
             r.destinationCIDRBlock = '0.0.0.0/0'
@@ -44,21 +44,21 @@ spec:
             privateTableId, privateSubnetIds = self.compose_network(
               False, '10.0.64.0/18', '10.0.128.0/18', '10.0.192.0/18',
             )
-            a = self.resources.Address('ec2.aws.crossplane.io/v1beta1', 'Address')
+            a = self.resources.Address('Address', 'ec2.aws.crossplane.io/v1beta1')
             a.spec.forProvider.region = self.spec.cluster.region
             a.spec.forProvider.tags = self.tags(Name=self.spec.cluster.name)
-            g = self.resources.NATGateway('ec2.aws.crossplane.io/v1beta1', 'NATGateway')
+            g = self.resources.NATGateway('NATGateway', 'ec2.aws.crossplane.io/v1beta1')
             g.spec.forProvider.region = self.spec.cluster.region
             g.spec.forProvider.allocationId = a.status.atProvider.allocationId
             g.spec.forProvider.subnetId = publicSubnetIds[0]
             g.spec.forProvider.tags = self.tags(Name=self.spec.cluster.name)
-            r = self.resources.RoutePrivate('ec2.aws.crossplane.io/v1alpha1', 'Route').spec.forProvider
+            r = self.resources.RoutePrivate('Route', 'ec2.aws.crossplane.io/v1alpha1').spec.forProvider
             r.region = self.spec.cluster.region
             r.routeTableId = privateTableId
             r.destinationCIDRBlock = '0.0.0.0/0'
             r.natGatewayId = g.status.atProvider.natGatewayId
 
-            c = self.resources.Cluster('eks.aws.crossplane.io/v1beta1', 'Cluster')
+            c = self.resources.Cluster('Cluster', 'eks.aws.crossplane.io/v1beta1')
             c.externalName = self.spec.cluster.name
             c.spec.forProvider.region = self.spec.cluster.region
             c.spec.forProvider.roleArn = self.compose_cluster_role()
@@ -72,7 +72,7 @@ spec:
             for ix, subnet in enumerate(subnets):
               zone = chr(ord('a') + ix)
               s = self.resources[f"Subnet{access.capitalize()}{zone.capitalize()}"](
-                'ec2.aws.crossplane.io/v1beta1', 'Subnet'
+                 'Subnet', 'ec2.aws.crossplane.io/v1beta1',
               )
               s.spec.forProvider.region = self.spec.cluster.region
               s.spec.forProvider.vpcId = self.status.vpcId
@@ -87,7 +87,7 @@ spec:
               )
               subnetIds.append(s.status.atProvider.subnetId)
             t = self.resources[f"RouteTable{access.capitalize()}"](
-              'ec2.aws.crossplane.io/v1beta1', 'RouteTable'
+               'RouteTable', 'ec2.aws.crossplane.io/v1beta1',
             )
             t.spec.forProvider.region = self.spec.cluster.region
             t.spec.forProvider.vpcId = self.status.vpcId
@@ -102,12 +102,12 @@ spec:
             d.Statement[0].Effect = 'Allow'
             d.Statement[0].Principal.Service = 'eks.amazonaws.com'
             d.Statement[0].Action = 'sts:AssumeRole'
-            r = self.resources.RoleCluster('iam.aws.crossplane.io/v1beta1', 'Role')
+            r = self.resources.RoleCluster('Role', 'iam.aws.crossplane.io/v1beta1')
             r.externalName = name
             r.spec.forProvider.assumeRolePolicyDocument = format(d, 'json')
             r.spec.forProvider.tags = self.tags()
             for policy in ('ClusterPolicy', 'VPCResourceController'):
-              a = self.resources[f"Rpa{policy}"]('iam.aws.crossplane.io/v1beta1', 'RolePolicyAttachment').spec.forProvider
+              a = self.resources[f"Rpa{policy}"]('RolePolicyAttachment', 'iam.aws.crossplane.io/v1beta1').spec.forProvider
               a.roleName = r.status.atProvider.roleID and name
               a.policyArn = f"arn:aws:iam::aws:policy/AmazonEKS{policy}"
             return r.status.atProvider.arn

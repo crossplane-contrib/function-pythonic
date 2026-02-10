@@ -18,6 +18,6 @@ spec:
       composite: |
         class Composite(BaseComposite):
           def compose(self):
-            r = self.resources.flexserver('dbforpostgresql.azure.upbound.io/v1beta1', 'FlexibleServer')
+            r = self.resources.flexserver('FlexibleServer', 'dbforpostgresql.azure.upbound.io/v1beta1')
             r.spec.forProvider.adminLogin = self.spec.adminLogin
             r.spec.forProvider.location = self.spec.location

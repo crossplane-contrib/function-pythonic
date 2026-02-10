@@ -17,5 +17,5 @@ spec:
       composite: |
         class Composite(BaseComposite):
           def compose(self):
-            r = self.resources.bucket('s3.aws.upbound.io/v1beta1', 'Bucket')
+            r = self.resources.bucket('Bucket', 's3.aws.upbound.io/v1beta1')
             r.spec.forProvider.region = self.spec.region

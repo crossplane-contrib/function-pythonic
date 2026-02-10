@@ -30,7 +30,7 @@ spec:
       composite: |
         class VpcComposite(BaseComposite):
           def compose(self):
-            vpc = self.resources.vpc('ec2.aws.crossplane.io/v1beta1', 'VPC')
+            vpc = self.resources.vpc('VPC', 'ec2.aws.crossplane.io/v1beta1')
             vpc.spec.forProvider.region = self.spec.region
             vpc.spec.forProvider.cidrBlock = self.spec.cidr
             self.status.vpcId = vpc.status.atProvider.vpcId
@@ -57,7 +57,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.3.1
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.4.0
 ```
 
 ### Crossplane V1
@@ -69,7 +69,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.3.1
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.4.0
   runtimeConfigRef:
     name: function-pythonic
 --
@@ -104,12 +104,12 @@ condition, the composition will be terminated or the observed value for that fie
 be used, depending on the `unknownsFatal` settings.
 
 Take the following example:
-```yaml
-vpc = self.resources.VPC('ec2.aws.crossplane.io/v1beta1', 'VPC')
+```python
+vpc = self.resources.VPC('VPC', 'ec2.aws.crossplane.io/v1beta1')
 vpc.spec.forProvider.region = 'us-east-1
 vpc.spec.forProvider.cidrBlock = '10.0.0.0/16'
 
-subnet = self.resources.SubnetA('ec2.aws.crossplane.io/v1beta1', 'Subnet')
+subnet = self.resources.SubnetA('Subnet', 'ec2.aws.crossplane.io/v1beta1')
 subnet.spec.forProvider.region = 'us-east-1'
 subnet.spec.forProvider.vpcId = vpc.status.atProvider.vpcId
 subnet.spec.forProvider.availabilityZone = 'us-east-1a'
@@ -126,19 +126,46 @@ overridden for all composed resource by setting the Composite `self.unknownsFata
 to False, or at the individual composed resource level by setting the
 `Resource.unknownsFatal` field to False.
 
+## Explicit Dependencies
+
+At times, the above implicit dependency handling does not account for all cases.
+Explicit dependencies can be configured using the resource `addDependency` method.
+The dependency's "ready" is used to determine when that dependency is available
+for use. The dependency's ready state can either be explictly set, or will be
+defaulted to it's auto-ready calculation.
+
+Here is an example of specifying an explicit dependency:
+```yaml
+crd = self.resources.KarpenterCrdRelease('Release', 'helm.crossplane.io/v1beta1')
+crd.spec.deletionPolicy = 'Orphan'
+crd.spec.forProvider.chart.repository = 'oci://public.ecr.aws/karpenter'
+crd.spec.forProvider.chart.name = 'karpenter-crd'
+crd.spec.forProvider.chart.version = '1.8.6'
+crd.spec.forProvider.namespace = 'karpenter'
+crd.externalName = 'karpenter-crd'
+karpenter = self.resources.KarpenterRelease('Release', 'helm.crossplane.io/v1beta1')
+karpenter.addDependency(crd)
+karpenter.spec.deletionPolicy = 'Orphan'
+karpenter.spec.forProvider.chart.repository = 'oci://public.ecr.aws/karpenter'
+karpenter.spec.forProvider.chart.name = 'karpenter'
+karpenter.spec.forProvider.chart.version = '1.8.6'
+karpenter.spec.forProvider.namespace = 'karpenter'
+karpenter.externalName = 'karpenter'
+```
+
 ## Usage Dependencies
 
 function-pythonic can be configured to automatically create
 [Crossplane Usages](https://docs.crossplane.io/latest/managed-resources/usages/)
 dependencies between resources. Modifying the above VPC example with:
-```yaml
+```python
 self.usages = True
 
-vpc = self.resources.VPC('ec2.aws.crossplane.io/v1beta1', 'VPC')
+vpc = self.resources.VPC('VPC', 'ec2.aws.crossplane.io/v1beta1')
 vpc.spec.forProvider.region = 'us-east-1
 vpc.spec.forProvider.cidrBlock = '10.0.0.0/16'
 
-subnet = self.resources.SubnetA('ec2.aws.crossplane.io/v1beta1', 'Subnet')
+subnet = self.resources.SubnetA('Subnet', 'ec2.aws.crossplane.io/v1beta1')
 subnet.spec.forProvider.region = 'us-east-1'
 subnet.spec.forProvider.vpcId = vpc.status.atProvider.vpcId
 subnet.spec.forProvider.availabilityZone = 'us-east-1a'
@@ -179,7 +206,7 @@ Calling a message or map will clear it and will set any provided key word
 arguments. For example, this will either create or clear the resource
 and then set its apiVersion and kind:
 ```python
-response.desired.resources.vpc.resource(apiVersion='ec2.aws.crossplane.io/v1beta1', kind='VPC')
+response.desired.resources.vpc.resource(kind='VPC', apiVersion='ec2.aws.crossplane.io/v1beta1')
 ```
 The following functions are provided to create Protobuf structures:
 | Function | Description |
@@ -236,8 +263,8 @@ The BaseComposite class provides the following fields for manipulating the Compo
 | self.conditions | Conditions | The composite desired and observed conditions, read from observed if not in desired |
 | self.results | Results | Returned results applied to the Composite and optionally on the Claim |
 | self.connectionSecret | Map | The name, namespace, and resourceName to use when generating the connection secret in Crossplane v2 |
-| self.connection | Map | The composite desired connection detials |
-| self.connection.observed | Map | The composite observed connection detials |
+| self.connection | Map | The composite desired connection details |
+| self.connection.observed | Map | The composite observed connection details |
 | self.ready | Boolean | The composite desired ready state |
 
 The BaseComposite also provides access to the following Crossplane Function level features:
@@ -254,9 +281,9 @@ The BaseComposite also provides access to the following Crossplane Function leve
 | self.environment | Map | The response environment, initialized from the request context environment |
 | self.requireds | Requireds | Request and read additional local Kubernetes resources |
 | self.resources | Resources | Define and process composed resources |
-| self.unknownsFatal | Boolean | Terminate the composition if already created resources are assigned unknown values, default True |
 | self.usages| Boolean | Generate Crossplane Usages for resource dependencies, default False |
 | self.autoReady | Boolean | Perform auto ready processing on all composed resources, default True |
+| self.unknownsFatal | Boolean | Terminate the composition if already created resources are assigned unknown values, default False |
 
 ### Composed Resources
 
@@ -281,9 +308,11 @@ Resource class:
 | Resource.conditions | Conditions | The resource conditions |
 | Resource.connection | Map | The resource observed connection details |
 | Resource.ready | Boolean | The resource ready state |
-| Resource.unknownsFatal | Boolean | Terminate the composition if this resource has been created and is assigned unknown values, default is Composite.unknownsFatal |
+| Resource.addDependency | Method | Add another composed resource as a dependency |
+| Resource.setReadyCondition | Method | Set Resource.ready to the Ready Condition status |
 | Resource.usages | Boolean | Generate Crossplane Usages for this resource, default is Composite.autoReady |
 | Resource.autoReady | Boolean | Perform auto ready processing on this resource, default is Composite.autoReady |
+| Resource.unknownsFatal | Boolean | Terminate the composition if this resource has been created and is assigned unknown values, default is Composite.unknownsFatal |
 
 ### Required Resources
 
@@ -382,28 +411,34 @@ $ pip install crossplane-function-pythonic
 Then to render function-pythonic Compositions, use the `function-pythonic render ...`
 command.
 ```shell
-$ function-pythonic render -h
-usage: Crossplane Function Pythonic render [-h] [--debug] [--log-name-width WIDTH] [--python-path DIRECTORY] [--render-unknowns]
-                                           [--allow-oversize-protos] [--context-files KEY=PATH] [--context-values KEY=VALUE]
-                                           [--observed-resources PATH] [--required-resources PATH] [--secret-store PATH] [--include-full-xr]
-                                           [--include-connection-xr] [--include-function-results] [--include-context]
-                                           PATH [PATH/CLASS]
+$ function-pythonic render --help
+usage: Crossplane Function Pythonic render [-h] [--debug] [--log-name-width WIDTH] [--logger-level LOGGER=LEVEL] [--python-path DIRECTORY]
+                                           [--render-unknowns] [--allow-oversize-protos] [--crossplane-v1] [--kube-context CONTEXT]
+                                           [--context-files KEY=PATH] [--context-values KEY=VALUE] [--observed-resources PATH]
+                                           [--required-resources PATH] [--secret-store PATH] [--include-full-xr] [--include-connection-xr]
+                                           [--include-function-results] [--include-context]
+                                           COMPOSITE [COMPOSITION]
 
 positional arguments:
-  PATH                  A YAML file containing the Composite resource to render.
-  PATH/CLASS            A YAML file containing the Composition resource or the complete path of a function=-pythonic BaseComposite subclass.
+  COMPOSITE             A YAML file containing the Composite resource to render, or kind:apiVersion:namespace:name of cluster Composite.
+  COMPOSITION           A YAML file containing the Composition resource, or the complete path of a function-pythonic BaseComposite subclass.
 
 options:
   -h, --help            show this help message and exit
   --debug, -d           Emit debug logs.
   --log-name-width WIDTH
                         Width of the logger name in the log output, default 40.
+  --logger-level LOGGER=LEVEL
+                        Logger level, for example: botocore.hooks=INFO
   --python-path DIRECTORY
                         Filing system directories to add to the python path.
   --render-unknowns, -u
                         Render resources with unknowns, useful during local development.
   --allow-oversize-protos
                         Allow oversized protobuf messages
+  --crossplane-v1       Enable Crossplane V1 compatibility mode
+  --kube-context, -k CONTEXT
+                        The kubectl context to use to obtain external resources from, such as required resources, connections, etc.
   --context-files KEY=PATH
                         Context key-value pairs to pass to the Function pipeline. Values must be files containing YAML/JSON.
   --context-values KEY=VALUE
@@ -419,7 +454,7 @@ options:
   --include-connection-xr
                         Include the Composite connection values in the rendered output as a resource of kind: Connection.
   --include-function-results, -r
-                        Include informational and warning messages from Functions in the rendered output as resources of kind: Result..
+                        Include informational and warning messages from Functions in the rendered output as resources of kind: Result.
   --include-context, -c
                         Include the context in the rendered output as a resource of kind: Context.
 ```
@@ -555,7 +590,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.3.1
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.4.0
   runtimeConfigRef:
     name: function-pythonic
 ---
@@ -639,7 +674,7 @@ data:
     from crossplane.pythonic import BaseComposite
     class GreetingComposite(BaseComposite):
         def compose(self):
-            cm = self.resources.ConfigMap('v1', 'ConfigMap')
+            cm = self.resources.ConfigMap('ConfigMap', 'v1')
             cm.data.greeting = f"Hello, {self.parameters.who}!"
 ```
 ```yaml

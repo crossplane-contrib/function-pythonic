@@ -24,7 +24,7 @@ spec:
             self.create_resource('third',  (5, False), (10, True))
 
           def create_resource(self, name, *conditions):
-            resource = self.resources[f"{name}-resource"]('nop.crossplane.io/v1alpha1', 'NopResource')
+            resource = self.resources[f"{name}-resource"]('NopResource', 'nop.crossplane.io/v1alpha1')
             for ix, (seconds, status) in enumerate(conditions):
               resource.spec.forProvider.conditionAfter[ix](
                 time=f"{seconds}s",
