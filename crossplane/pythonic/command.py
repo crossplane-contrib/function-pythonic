@@ -77,6 +77,11 @@ class Command:
         logger = logging.getLogger()
         logger.handlers = [handler]
         logger.setLevel(logging.DEBUG if self.args.debug else logging.INFO)
+        # Suppress noisy libraries, these can be overriden using --logger-level
+        logging.getLogger('asyncio').setLevel(logging.INFO)
+        logging.getLogger('httpcore').setLevel(logging.INFO)
+        logging.getLogger('httpx').setLevel(logging.WARNING)
+        logging.getLogger('kr8s').setLevel(logging.INFO)
         for logger_level in self.args.logger_level:
             for logger_level in logger_level.split(','):
                 logger_level = logger_level.split('=')
