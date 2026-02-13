@@ -356,13 +356,13 @@ class Command(command.Command):
             if not self.kube_context:
                 print('"composition" argument required', file=sys.stderr)
                 sys.exit(1)
-            if self.args.crossplane_v1:
-                revision = self.composite.spec.compositionRevisionRef
-            else:
-                revision = self.composite.spec.crossplane.compositionRevisionRef
+            revision = self.composite.spec.crossplane.compositionRevisionRef
             if not revision.name:
-                print('Composite does not contain a CompositionRevision name', file=sys.stderr)
-                sys.exit(1)
+                # Crossplane V1 location
+                revision = self.composite.spec.compositionRevisionRef
+                if not revision.name:
+                    print('Composite does not contain a CompositionRevision name', file=sys.stderr)
+                    sys.exit(1)
             self.composition = await self.kube_get('CompositionRevision', 'apiextensions.crossplane.io/v1', None, str(revision.name))
             return
         if self.args.composition.is_file():
@@ -434,10 +434,9 @@ class Command(command.Command):
         # Obtain observed resources if using external cluster
         if self.kube_context:
             async with asyncio.TaskGroup() as group:
-                if self.args.crossplane_v1:
+                refs = self.composite.spec.crossplane.resourceRefs
+                if not refs:
                     refs = self.composite.spec.resourceRefs
-                else:
-                    refs = self.composite.spec.crossplane.resourceRefs
                 for ref in refs:
                     group.create_task(self.setup_observed_resource(ref))
 
@@ -536,12 +535,12 @@ class Command(command.Command):
                         else:
                             await self.setup_resource(required, items[protobuf.append])
         if not len(items) and self.kube_context:
-            if selector.match_name:
+            if len(selector.match_name):
                 required = await self.kube_get(selector.kind, selector.api_version, selector.namespace, selector.match_name, False)
                 if required:
                     await self.setup_resource(required, items[protobuf.append])
-            elif selector.match_labels.labels:
-                for requiest in await kube_list(selector.kind, selector.api_version, selector.namespace, selector.match_labels.labels):
+            elif len(selector.match_labels.labels):
+                for required in await self.kube_list(selector.kind, selector.api_version, selector.namespace, selector.match_labels.labels):
                     await self.setup_resource(required, items[protobuf.append])
 
     def copy_resource(self, source, destination):
@@ -610,11 +609,12 @@ class Command(command.Command):
         resources = [
             protobuf.Value(None, None, resource.raw)
             async for resource in clazz.list(
-                    namespace=str(namespace) if namespace and len(namespace) else None,
-                    label_selector={
-                        label: str(value)
-                        for label, value in labelSelector
-                    },
+                namespace=str(namespace) if namespace and len(namespace) else None,
+                label_selector={
+                    label: str(value)
+                    for label, value in labelSelector
+                },
+                api=self.kube_context,
             )
         ]
         if self.logger.isEnabledFor(logging.DEBUG):

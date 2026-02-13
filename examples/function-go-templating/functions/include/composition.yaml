@@ -21,7 +21,7 @@ spec:
               'some-text': self.spec.val1,
               'other-text': self.spec.val2,
             }
-            r = self.resources.test1('Deployment', 'apps/v1', 'Deployment')
+            r = self.resources.test1('Deployment', 'apps/v1')
             r.metadata.labels = labels
             r.spec.replicas = 3
             r.spec.selector.matchLabels = labels

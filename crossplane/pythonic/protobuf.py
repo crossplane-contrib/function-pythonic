@@ -406,12 +406,26 @@ class RepeatedMessage:
 
     def __getitem__(self, key):
         key = self._validate_key(key)
-        if key in self._cache:
-            return self._cache[key]
-        if self._messages is _Unknown or key >= len(self._messages):
+        if key == append:
+            if self._messages is _Unknown:
+                key = 0
+            else:
+                key = len(self._messages)
             value = _Unknown
         else:
-            value = self._messages[key]
+            if key < 0:
+                if self._messages is _Unknown:
+                    key = 0
+                else:
+                    key = len(self._messages) + key
+                    if key < 0:
+                        key = 0
+            if key in self._cache:
+                return self._cache[key]
+            if self._messages is _Unknown or key >= len(self._messages):
+                value = _Unknown
+            else:
+                value = self._messages[key]
         if value is None and self._field.has_default_value:
             value = self._field.default_value
         if self._field.type == self._field.TYPE_MESSAGE:

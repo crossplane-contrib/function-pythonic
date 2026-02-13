@@ -43,7 +43,7 @@ class Connection:
 
     def __set__(self, composite, values):
         connection = self.__get__(composite)
-        coneection()
+        connection()
         for key, value in values:
             connection[key] = value
 
@@ -384,7 +384,7 @@ class Resource:
                     field = resource.observed.metadata.name
                 else:
                     field = resource.status.notReady
-        self.metadata.annotations[f"Dependency{resource.name}"] = field
+        self.metadata.annotations[f"pythonic.dependency/{resource.name}"] = field
 
 class Requireds:
     def __init__(self, composite):
@@ -757,7 +757,7 @@ class Results:
         return len(self) > 0
 
     def __len__(self):
-        len(self._results)
+        return len(self._results)
 
     def __getitem__(self, key):
         if key >= len(self._results):
@@ -832,7 +832,7 @@ class Result:
 
     @property
     def claim(self):
-        return bool(self) and self._result == fnv1.Target.TARGET_COMPOSITE_AND_CLAIM
+        return bool(self) and self._result.target == fnv1.Target.TARGET_COMPOSITE_AND_CLAIM
 
     @claim.setter
     def claim(self, claim):
@@ -887,10 +887,10 @@ class _Connection:
 
     def __call__(self, **kwargs):
         self._composite.response.desired.composite.connection_details(**kwargs)
-        if self._composite_v1:
+        if self._composite.crossplane_v1:
             return
         del self._composite.resources[self._resource_name]
-        for key, value in kwargs:
+        for key, value in kwargs.items():
             self[key] = value
 
     def __setattr__(self, key, value):
