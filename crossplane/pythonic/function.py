@@ -17,9 +17,8 @@ logger = logging.getLogger(__name__)
 class FunctionRunner(grpcv1.FunctionRunnerService):
     """A FunctionRunner handles gRPC RunFunctionRequests."""
 
-    def __init__(self, debug=False, renderUnknowns=False, crossplane_v1=False):
+    def __init__(self, renderUnknowns=False, crossplane_v1=False):
         """Create a new FunctionRunner."""
-        self.debug = debug
         self.renderUnknowns = renderUnknowns
         self.crossplane_v1 = crossplane_v1
         self.clazzes = {}
@@ -182,7 +181,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         for _, resource in sorted(entry for entry in composite.resources):
             dependencies = resource.desired._getDependencies
             if dependencies:
-                if self.debug:
+                if composite.logger.isEnabledFor(logging.DEBUG):
                     for destination, source in sorted(dependencies.items()):
                         destination = self.trimFullName(destination)
                         source = self.trimFullName(source)
@@ -278,7 +277,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                     if resource.unknownsFatal or (resource.unknownsFatal is None and composite.unknownsFatal):
                         fatalResources.append(name)
                         fatal = True
-                if self.debug:
+                if composite.logger.isEnabledFor(logging.DEBUG):
                     for destination, source in sorted(unknowns.items()):
                         destination = self.trimFullName(destination)
                         source = self.trimFullName(source)
@@ -319,7 +318,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
             message = 'All resources are composed'
             status = True
             result = None
-        if not self.debug and level:
+        if not composite.logger.isEnabledFor(logging.DEBUG) and level:
             level(message)
         composite.conditions.ResourcesComposed(reason, message, status)
         if result:
@@ -378,6 +377,7 @@ class Module:
         self.List = pythonic.List
         self.Unknown = pythonic.Unknown
         self.Yaml = pythonic.Yaml
+        self.YamlAll = pythonic.YamlAll
         self.Json = pythonic.Json
         self.B64Encode = pythonic.B64Encode
         self.B64Decode = pythonic.B64Decode

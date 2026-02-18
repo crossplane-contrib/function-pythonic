@@ -2,8 +2,6 @@
 cd $(dirname $(realpath $0))
 exec function-pythonic render xr.yaml composition.yaml \
      --debug \
-     --observed-resources rds-observed.yaml \
-     --secret-store step-credential.yaml \
-     --secret-store composite-connection.yaml \
-     --secret-store rds-connection.yaml \
+     --observed-resources observed.yaml \
+     --required-resources resources.yaml \
      --include-connection-xr

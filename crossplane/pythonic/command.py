@@ -63,7 +63,7 @@ class Command:
             help='Enable Crossplane V1 compatibility mode',
         )
 
-    def __init__(self, args):
+    def __init__(self, args=None):
         self.args = args
         self.initialize()
 
@@ -79,6 +79,7 @@ class Command:
         logger.setLevel(logging.DEBUG if self.args.debug else logging.INFO)
         # Suppress noisy libraries, these can be overriden using --logger-level
         logging.getLogger('asyncio').setLevel(logging.INFO)
+        logging.getLogger('grpc').setLevel(logging.INFO)
         logging.getLogger('httpcore').setLevel(logging.INFO)
         logging.getLogger('httpx').setLevel(logging.WARNING)
         logging.getLogger('kr8s').setLevel(logging.INFO)

@@ -57,7 +57,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.4.1
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.4.2
 ```
 
 ### Crossplane V1
@@ -69,7 +69,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.4.1
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.4.2
   runtimeConfigRef:
     name: function-pythonic
 --
@@ -215,6 +215,7 @@ The following functions are provided to create Protobuf structures:
 | List | Create a new Protobuf list |
 | Unknown | Create a new Protobuf unknown placeholder |
 | Yaml | Create a new Protobuf structure from a yaml string |
+| YamlAll | Create a new Protobuf list from a yaml string |
 | Json | Create a new Protobuf structure from a json string |
 | B64Encode | Encode a string into base 64 |
 | B64Decode | Decode a string from base 64 |
@@ -590,7 +591,7 @@ kind: Function
 metadata:
   name: function-pythonic
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.4.1
+  package: xpkg.upbound.io/crossplane-contrib/function-pythonic:v0.4.2
   runtimeConfigRef:
     name: function-pythonic
 ---

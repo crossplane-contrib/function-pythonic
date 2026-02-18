@@ -19,8 +19,8 @@ spec:
         class Composite(BaseComposite):
           def compose(self):
             self.environment.complex = self.requireds['example-config'](
-              'apiextensions.crossplane.io/v1alpha1',
               'EnvironmentConfig',
+              'apiextensions.crossplane.io/v1alpha1',
               name='example-config',
             )[0].data.complex
             self.environment.update = 'environment'

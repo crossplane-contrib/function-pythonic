@@ -1,7 +1,7 @@
 
 
 from .composite import BaseComposite
-from .protobuf import append, Map, List, Unknown, Yaml, Json, B64Encode, B64Decode
+from .protobuf import append, Map, List, Unknown, Yaml, YamlAll, Json, B64Encode, B64Decode
 
 __all__ = [
     'BaseComposite',
@@ -10,6 +10,7 @@ __all__ = [
     'List',
     'Unknown',
     'Yaml',
+    'YamlAll',
     'Json',
     'B64Encode',
     'B64Decode',

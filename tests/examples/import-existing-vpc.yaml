@@ -1,0 +1,25 @@
+composite:
+  apiVersion: caleb.pythonic.com/v1alpha1
+  kind: Network
+  status:
+    conditions:
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      reason: Available
+      status: 'True'
+      type: Ready
+connection:
+  apiVersion: render.crossplane.io/v1beta1
+  kind: Connection
+  values: {}
+context:
+  apiVersion: render.crossplane.io/v1beta1
+  kind: Context
+  values: {}
+resources: []
+results:
+- apiVersion: render.crossplane.io/v1beta1
+  kind: Result
+  message: 'Exec exception: No module named ''aiobotocore'''
+  reason: ''
+  severity: SEVERITY_FATAL
+  step: render-templates
