@@ -1,0 +1,43 @@
+composite:
+  apiVersion: example.crossplane.io/v1
+  kind: XR
+  status:
+    conditions:
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      reason: Available
+      status: 'True'
+      type: Ready
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      message: failed to install
+      reason: InstallFail
+      status: 'False'
+      type: TestCondition
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      message: we are true
+      reason: TrueCondition
+      status: 'True'
+      type: ConditionTrue
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      message: Database is ready
+      reason: Ready
+      status: 'True'
+      type: DatabaseReady
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      message: All resources are composed
+      reason: AllComposed
+      status: 'True'
+      type: ResourcesComposed
+connection:
+  apiVersion: render.crossplane.io/v1beta1
+  kind: Connection
+  values: {}
+context:
+  apiVersion: render.crossplane.io/v1beta1
+  kind: Context
+  values:
+    _pythonic:
+      conditions:
+        iteration: 1
+    iteration: 1
+resources: []
+results: []

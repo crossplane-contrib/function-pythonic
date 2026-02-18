@@ -60,7 +60,7 @@ async def test(fn_case):
     utils.map_merge(response, test.get('response', {}))
 
     result = utils.message_dict(
-        await function.FunctionRunner(True, False, test.get('v1', False)).RunFunction(request, None)
+        await function.FunctionRunner(False, test.get('v1', False)).RunFunction(request, None)
     )
 
     assert result == response

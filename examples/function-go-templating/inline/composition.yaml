@@ -16,14 +16,13 @@ spec:
       apiVersion: pythonic.fn.crossplane.io/v1alpha1
       kind: Composite
       composite: |
-        import random
         class Composite(BaseComposite):
           def compose(self):
             for ix in range(int(self.spec.count)):
               user = f"test-user-{ix}"
               r = self.resources[user]('User', 'iam.aws.upbound.io/v1beta1')
               r.metadata.labels['testing.upbound.io/example-name'] = user
-              r.metadata.labels.dummy = r.observed.metadata.labels.dummy or random.choice(['foo', 'bar', 'baz'])
+              r.metadata.labels.dummy = r.observed.metadata.labels.dummy or ['foo', 'bar', 'baz'][ix % 3]
               r = self.resources[f"sample-access-key-{ix}"]('AccessKey', 'iam.aws.upbound.io/v1beta1')
               r.spec.forProvider.userSelector.matchLabels['testing.upbound.io/example-name'] = user
               r.spec.writeConnectionSecretToRef.namespace = 'crossplane.system'

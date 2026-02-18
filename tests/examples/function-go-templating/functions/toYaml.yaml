@@ -1,0 +1,35 @@
+composite:
+  apiVersion: example.crossplane.io/v1beta1
+  kind: XR
+  status:
+    conditions:
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      reason: Available
+      status: 'True'
+      type: Ready
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      message: All resources are composed
+      reason: AllComposed
+      status: 'True'
+      type: ResourcesComposed
+    dummy: |
+      list:
+      - abc
+      - def
+      scalar1: true
+      scalar2: text
+      scalar3: 123
+connection:
+  apiVersion: render.crossplane.io/v1beta1
+  kind: Connection
+  values: {}
+context:
+  apiVersion: render.crossplane.io/v1beta1
+  kind: Context
+  values:
+    _pythonic:
+      render-templates:
+        iteration: 1
+    iteration: 1
+resources: []
+results: []

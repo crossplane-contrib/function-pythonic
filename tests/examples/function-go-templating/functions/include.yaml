@@ -1,0 +1,101 @@
+composite:
+  apiVersion: example.crossplane.io/v1beta1
+  kind: XR
+  status:
+    conditions:
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      message: 'Unready resources: test1,test2'
+      reason: Creating
+      status: 'False'
+      type: Ready
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      message: All resources are composed
+      reason: AllComposed
+      status: 'True'
+      type: ResourcesComposed
+connection:
+  apiVersion: render.crossplane.io/v1beta1
+  kind: Connection
+  values: {}
+context:
+  apiVersion: render.crossplane.io/v1beta1
+  kind: Context
+  values:
+    _pythonic:
+      render-templates:
+        iteration: 1
+    iteration: 1
+resources:
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: test1
+    generateName: example-
+    labels:
+      crossplane.io/composite: example
+      other-text: value2
+      some-text: value1
+    ownerReferences:
+    - apiVersion: example.crossplane.io/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: XR
+      name: example
+      uid: ''
+  ready: null
+  spec:
+    replicas: 3
+    selector:
+      matchLabels:
+        other-text: value2
+        some-text: value1
+    template:
+      metadata:
+        labels:
+          app: nginx
+          other-text: value2
+          some-text: value1
+      spec:
+        containers:
+        - image: nginx:1.14.2
+          name: nginx
+          ports:
+          - containerPort: 80
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: test2
+    generateName: example-
+    labels:
+      crossplane.io/composite: example
+      other-text: value2
+      some-text: value1
+    ownerReferences:
+    - apiVersion: example.crossplane.io/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: XR
+      name: example
+      uid: ''
+  ready: null
+  spec:
+    replicas: 3
+    selector:
+      matchLabels:
+        other-text: value2
+        some-text: value1
+    template:
+      metadata:
+        labels:
+          app: nginx
+          other-text: value2
+          some-text: value1
+      spec:
+        containers:
+        - image: nginx:1.14.2
+          name: nginx
+          ports:
+          - containerPort: 80
+results: []

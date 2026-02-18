@@ -1,0 +1,119 @@
+composite:
+  apiVersion: example.org/v1alpha1
+  kind: UserAccessKey
+  status:
+    conditions:
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      message: 'Unready resources: access-key-0,access-key-1,connection-secret'
+      reason: Creating
+      status: 'False'
+      type: Ready
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      message: All resources are composed
+      reason: AllComposed
+      status: 'True'
+      type: ResourcesComposed
+connection:
+  apiVersion: render.crossplane.io/v1beta1
+  kind: Connection
+  values:
+    password-0: accesskey-0-password
+    password-1: accesskey-1-password
+    user-0: accesskey-0-username
+    user-1: accesskey-1-username
+context:
+  apiVersion: render.crossplane.io/v1beta1
+  kind: Context
+  values:
+    _pythonic:
+      render-pythonic:
+        iteration: 1
+    iteration: 1
+resources:
+- apiVersion: iam.aws.m.upbound.io/v1beta1
+  kind: AccessKey
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: access-key-0
+    labels:
+      crossplane.io/composite: my-keys
+    name: my-keys-12345
+    namespace: default
+    ownerReferences:
+    - apiVersion: example.org/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: UserAccessKey
+      name: my-keys
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      user: my-user
+    writeConnectionSecretToRef:
+      name: my-keys-accesskey-0
+- apiVersion: iam.aws.m.upbound.io/v1beta1
+  kind: AccessKey
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: access-key-1
+    labels:
+      crossplane.io/composite: my-keys
+    name: my-keys-67890
+    namespace: default
+    ownerReferences:
+    - apiVersion: example.org/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: UserAccessKey
+      name: my-keys
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      user: my-user
+    writeConnectionSecretToRef:
+      name: my-keys-accesskey-1
+- apiVersion: v1
+  data:
+    password-0: YWNjZXNza2V5LTAtcGFzc3dvcmQ=
+    password-1: YWNjZXNza2V5LTEtcGFzc3dvcmQ=
+    user-0: YWNjZXNza2V5LTAtdXNlcm5hbWU=
+    user-1: YWNjZXNza2V5LTEtdXNlcm5hbWU=
+  kind: Secret
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: connection-secret
+    labels:
+      crossplane.io/composite: my-keys
+    name: my-keys-connection-details
+    namespace: default
+    ownerReferences:
+    - apiVersion: example.org/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: UserAccessKey
+      name: my-keys
+      uid: ''
+  ready: null
+  type: connection.crossplane.io/v1alpha1
+- apiVersion: iam.aws.m.upbound.io/v1beta1
+  kind: User
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: user
+    labels:
+      crossplane.io/composite: my-keys
+    name: my-keys-12345
+    namespace: default
+    ownerReferences:
+    - apiVersion: example.org/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: UserAccessKey
+      name: my-keys
+      uid: ''
+  ready: true
+  spec:
+    forProvider: {}
+results: []

@@ -1,0 +1,71 @@
+composite:
+  apiVersion: example.crossplane.io/v1beta1
+  kind: XR
+  status:
+    conditions:
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      message: 'Unready resources: flexServer,flexServerConfig'
+      reason: Creating
+      status: 'False'
+      type: Ready
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      message: All resources are composed
+      reason: AllComposed
+      status: 'True'
+      type: ResourcesComposed
+connection:
+  apiVersion: render.crossplane.io/v1beta1
+  kind: Connection
+  values: {}
+context:
+  apiVersion: render.crossplane.io/v1beta1
+  kind: Context
+  values:
+    _pythonic:
+      render-templates:
+        iteration: 1
+    iteration: 1
+resources:
+- apiVersion: dbforpostgresql.azure.upbound.io/v1beta1
+  kind: FlexibleServer
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: flexServer
+    generateName: example-
+    labels:
+      crossplane.io/composite: example
+    ownerReferences:
+    - apiVersion: example.crossplane.io/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: XR
+      name: example
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      storageMb: 32768
+    providerConfigRef:
+      name: my-provider-cfg
+- apiVersion: dbforpostgresql.azure.upbound.io/v1beta1
+  kind: FlexibleServerConfiguration
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: flexServerConfig
+    generateName: example-
+    labels:
+      crossplane.io/composite: example
+    ownerReferences:
+    - apiVersion: example.crossplane.io/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: XR
+      name: example
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      serverId: abcdef
+    providerConfigRef:
+      name: my-provider-cfg
+results: []

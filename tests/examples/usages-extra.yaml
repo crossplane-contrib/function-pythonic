@@ -1,0 +1,85 @@
+composite:
+  apiVersion: example.crossplane.io/v1beta1
+  kind: XR
+  status:
+    conditions:
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      message: 'Unready resources: SubnetA,SubnetA_VPC_usages-vpc'
+      reason: Creating
+      status: 'False'
+      type: Ready
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      message: All resources are composed
+      reason: AllComposed
+      status: 'True'
+      type: ResourcesComposed
+connection:
+  apiVersion: render.crossplane.io/v1beta1
+  kind: Connection
+  values: {}
+context:
+  apiVersion: render.crossplane.io/v1beta1
+  kind: Context
+  values:
+    _pythonic:
+      render-templates:
+        iteration: 2
+        requireds:
+          VPC:
+            apiVersion: ec2.aws.crossplane.io/v1beta1
+            kind: VPC
+            matchName: usages-vpc
+    iteration: 2
+resources:
+- apiVersion: ec2.aws.crossplane.io/v1beta1
+  kind: Subnet
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: SubnetA
+    labels:
+      crossplane.io/composite: example
+    name: usages-subnet
+    ownerReferences:
+    - apiVersion: example.crossplane.io/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: XR
+      name: example
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      availabilityZone: us-east-1a
+      cidrBlock: 10.0.0.0/20
+      region: us-east-1
+      vpcId: vpc-01234567
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: SubnetA_VPC_usages-vpc
+    generateName: example-
+    labels:
+      crossplane.io/composite: example
+    ownerReferences:
+    - apiVersion: example.crossplane.io/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: XR
+      name: example
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: Subnet
+      resourceRef:
+        name: usages-subnet
+    of:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: VPC
+      resourceRef:
+        name: usages-vpc
+    reason: spec.forProvider.vpcId = status.atProvider.vpcId
+    replayDeletion: true
+results: []

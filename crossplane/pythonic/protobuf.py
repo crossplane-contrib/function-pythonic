@@ -42,6 +42,13 @@ def Yaml(string, readOnly=None):
         string = str(string)
     return Value(None, None, yaml.safe_load(string), readOnly)
 
+def YamlAll(string, readOnly=None):
+    if isinstance(string, (FieldMessage, Value)):
+        if not string:
+            return string
+        string = str(string)
+    return Value(None, None, [document for document in yaml.safe_load_all(string)], readOnly)
+
 def Json(string, readOnly=None):
     if isinstance(string, (FieldMessage, Value)):
         if not string:

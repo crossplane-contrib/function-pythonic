@@ -1,0 +1,54 @@
+composite:
+  apiVersion: example.crossplane.io/v1
+  kind: XR
+  status:
+    conditions:
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      reason: Available
+      status: 'True'
+      type: Ready
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      message: All resources are composed
+      reason: AllComposed
+      status: 'True'
+      type: ResourcesComposed
+    fromEnv: e
+connection:
+  apiVersion: render.crossplane.io/v1beta1
+  kind: Connection
+  values: {}
+context:
+  apiVersion: render.crossplane.io/v1beta1
+  kind: Context
+  values:
+    _pythonic:
+      python-update-conditions:
+        iteration: 2
+        requireds:
+          example-config:
+            apiVersion: apiextensions.crossplane.io/v1alpha1
+            kind: EnvironmentConfig
+            matchName: example-config
+    apiextensions.crossplane.io/environment:
+      array:
+      - '1'
+      - '2'
+      complex:
+        a: b
+        c:
+          d: e
+          f: '1'
+      nestedEnvUpdate:
+        hello: world
+      update: environment
+    iteration: 2
+    newKey:
+      hello: world
+    other-context-key:
+      complex:
+        a: b
+        c:
+          d: e
+          f: '1'
+resources: []
+results: []

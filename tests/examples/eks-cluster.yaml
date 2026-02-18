@@ -1,0 +1,1215 @@
+composite:
+  apiVersion: pythonic.crossplane.io/v1alpha1
+  kind: EksCluster
+  status:
+    conditions:
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      message: 'Unready resources: Address,Cluster,Cluster_Role_<<UNKNOWN>>,Cluster_Subnet_<<UNKNOWN>>,InternetGateway,InternetGateway_VPC_<<UNKNOWN>>,NATGateway,NATGateway_Address_<<UNKNOWN>>,NATGateway_Subnet_<<UNKNOWN>>,RoleCluster,RoutePrivate,RoutePrivate_NATGateway_<<UNKNOWN>>,RoutePrivate_RouteTable_<<UNKNOWN>>,RoutePublic,RoutePublic_InternetGateway_<<UNKNOWN>>,RoutePublic_RouteTable_<<UNKNOWN>>,RouteTablePrivate,RouteTablePrivate_Subnet_<<UNKNOWN>>,RouteTablePrivate_VPC_<<UNKNOWN>>,RouteTablePublic,RouteTablePublic_Subnet_<<UNKNOWN>>,RouteTablePublic_VPC_<<UNKNOWN>>,RpaClusterPolicy,RpaClusterPolicy_Role_<<UNKNOWN>>,RpaVPCResourceController,RpaVPCResourceController_Role_<<UNKNOWN>>,SubnetPrivateA,SubnetPrivateA_VPC_<<UNKNOWN>>,SubnetPrivateB,SubnetPrivateB_VPC_<<UNKNOWN>>,SubnetPrivateC,SubnetPrivateC_VPC_<<UNKNOWN>>,SubnetPublicA,SubnetPublicA_VPC_<<UNKNOWN>>,SubnetPublicB,SubnetPublicB_VPC_<<UNKNOWN>>,SubnetPublicC,SubnetPublicC_VPC_<<UNKNOWN>>,VPC'
+      reason: Creating
+      status: 'False'
+      type: Ready
+    - lastTransitionTime: '2026-01-01T00:00:00Z'
+      message: 'Desired resources with unknowns: Cluster,Cluster_Role_<<UNKNOWN>>,Cluster_Subnet_<<UNKNOWN>>,InternetGateway,InternetGateway_VPC_<<UNKNOWN>>,NATGateway,NATGateway_Address_<<UNKNOWN>>,NATGateway_Subnet_<<UNKNOWN>>,RoutePrivate,RoutePrivate_NATGateway_<<UNKNOWN>>,RoutePrivate_RouteTable_<<UNKNOWN>>,RoutePublic,RoutePublic_InternetGateway_<<UNKNOWN>>,RoutePublic_RouteTable_<<UNKNOWN>>,RouteTablePrivate,RouteTablePrivate_Subnet_<<UNKNOWN>>,RouteTablePrivate_VPC_<<UNKNOWN>>,RouteTablePublic,RouteTablePublic_Subnet_<<UNKNOWN>>,RouteTablePublic_VPC_<<UNKNOWN>>,RpaClusterPolicy,RpaClusterPolicy_Role_<<UNKNOWN>>,RpaVPCResourceController,RpaVPCResourceController_Role_<<UNKNOWN>>,SubnetPrivateA,SubnetPrivateA_VPC_<<UNKNOWN>>,SubnetPrivateB,SubnetPrivateB_VPC_<<UNKNOWN>>,SubnetPrivateC,SubnetPrivateC_VPC_<<UNKNOWN>>,SubnetPublicA,SubnetPublicA_VPC_<<UNKNOWN>>,SubnetPublicB,SubnetPublicB_VPC_<<UNKNOWN>>,SubnetPublicC,SubnetPublicC_VPC_<<UNKNOWN>>'
+      reason: DesiredUnknowns
+      status: 'False'
+      type: ResourcesComposed
+connection:
+  apiVersion: render.crossplane.io/v1beta1
+  kind: Connection
+  values: {}
+context:
+  apiVersion: render.crossplane.io/v1beta1
+  kind: Context
+  values:
+    _pythonic:
+      render-templates:
+        iteration: 1
+    iteration: 1
+resources:
+- apiVersion: ec2.aws.crossplane.io/v1beta1
+  kind: Address
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: Address
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      region: us-east-1
+      tags:
+      - key: Name
+        value: pythonic
+      - key: crossplane-contrib:cloudops
+        value: owned
+      - key: environment
+        value: stage
+      - key: project
+        value: development
+- apiVersion: eks.aws.crossplane.io/v1beta1
+  kind: Cluster
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: Cluster
+      crossplane.io/external-name: pythonic
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      region: us-east-1
+      resourcesVpcConfig:
+        subnetIds:
+        - UNKNOWN:SubnetPublicA.status.atProvider.subnetId
+        - UNKNOWN:SubnetPublicB.status.atProvider.subnetId
+        - UNKNOWN:SubnetPublicC.status.atProvider.subnetId
+        - UNKNOWN:SubnetPrivateA.status.atProvider.subnetId
+        - UNKNOWN:SubnetPrivateB.status.atProvider.subnetId
+        - UNKNOWN:SubnetPrivateC.status.atProvider.subnetId
+      roleArn: UNKNOWN:RoleCluster.status.atProvider.arn
+      tags:
+        crossplane-contrib:cloudops: owned
+        environment: stage
+        project: development
+      version: '1.32'
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: Cluster_Role_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: eks.aws.crossplane.io/v1beta1
+      kind: Cluster
+      resourceRef:
+        name: UNKNOWN:Cluster.metadata.name
+    of:
+      apiVersion: iam.aws.crossplane.io/v1beta1
+      kind: Role
+      resourceRef:
+        name: UNKNOWN:RoleCluster.metadata.name
+    reason: spec.forProvider.roleArn = status.atProvider.arn
+    replayDeletion: true
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: Cluster_Subnet_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: eks.aws.crossplane.io/v1beta1
+      kind: Cluster
+      resourceRef:
+        name: UNKNOWN:Cluster.metadata.name
+    of:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: Subnet
+      resourceRef:
+        name: UNKNOWN:SubnetPrivateC.metadata.name
+    reason: spec.forProvider.resourcesVpcConfig.subnetIds[5] = status.atProvider.subnetId
+    replayDeletion: true
+- apiVersion: ec2.aws.crossplane.io/v1beta1
+  kind: InternetGateway
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: InternetGateway
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      region: us-east-1
+      tags:
+      - key: Name
+        value: pythonic
+      - key: crossplane-contrib:cloudops
+        value: owned
+      - key: environment
+        value: stage
+      - key: project
+        value: development
+      vpcId: UNKNOWN:VPC.status.atProvider.vpcId
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: InternetGateway_VPC_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: InternetGateway
+      resourceRef:
+        name: UNKNOWN:InternetGateway.metadata.name
+    of:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: VPC
+      resourceRef:
+        name: UNKNOWN:VPC.metadata.name
+    reason: spec.forProvider.vpcId = status.atProvider.vpcId
+    replayDeletion: true
+- apiVersion: ec2.aws.crossplane.io/v1beta1
+  kind: NATGateway
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: NATGateway
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      allocationId: UNKNOWN:Address.status.atProvider.allocationId
+      region: us-east-1
+      subnetId: UNKNOWN:SubnetPublicA.status.atProvider.subnetId
+      tags:
+      - key: Name
+        value: pythonic
+      - key: crossplane-contrib:cloudops
+        value: owned
+      - key: environment
+        value: stage
+      - key: project
+        value: development
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: NATGateway_Address_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: NATGateway
+      resourceRef:
+        name: UNKNOWN:NATGateway.metadata.name
+    of:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: Address
+      resourceRef:
+        name: UNKNOWN:Address.metadata.name
+    reason: spec.forProvider.allocationId = status.atProvider.allocationId
+    replayDeletion: true
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: NATGateway_Subnet_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: NATGateway
+      resourceRef:
+        name: UNKNOWN:NATGateway.metadata.name
+    of:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: Subnet
+      resourceRef:
+        name: UNKNOWN:SubnetPublicA.metadata.name
+    reason: spec.forProvider.subnetId = status.atProvider.subnetId
+    replayDeletion: true
+- apiVersion: iam.aws.crossplane.io/v1beta1
+  kind: Role
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: RoleCluster
+      crossplane.io/external-name: pythonic-cluster
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      assumeRolePolicyDocument: |-
+        {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "eks.amazonaws.com"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        }
+      tags:
+      - key: crossplane-contrib:cloudops
+        value: owned
+      - key: environment
+        value: stage
+      - key: project
+        value: development
+- apiVersion: ec2.aws.crossplane.io/v1alpha1
+  kind: Route
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: RoutePrivate
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      destinationCIDRBlock: 0.0.0.0/0
+      natGatewayId: UNKNOWN:NATGateway.status.atProvider.natGatewayId
+      region: us-east-1
+      routeTableId: UNKNOWN:RouteTablePrivate.status.atProvider.routeTableId
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: RoutePrivate_NATGateway_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: ec2.aws.crossplane.io/v1alpha1
+      kind: Route
+      resourceRef:
+        name: UNKNOWN:RoutePrivate.metadata.name
+    of:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: NATGateway
+      resourceRef:
+        name: UNKNOWN:NATGateway.metadata.name
+    reason: spec.forProvider.natGatewayId = status.atProvider.natGatewayId
+    replayDeletion: true
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: RoutePrivate_RouteTable_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: ec2.aws.crossplane.io/v1alpha1
+      kind: Route
+      resourceRef:
+        name: UNKNOWN:RoutePrivate.metadata.name
+    of:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: RouteTable
+      resourceRef:
+        name: UNKNOWN:RouteTablePrivate.metadata.name
+    reason: spec.forProvider.routeTableId = status.atProvider.routeTableId
+    replayDeletion: true
+- apiVersion: ec2.aws.crossplane.io/v1alpha1
+  kind: Route
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: RoutePublic
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      destinationCIDRBlock: 0.0.0.0/0
+      gatewayId: UNKNOWN:InternetGateway.status.atProvider.internetGatewayId
+      region: us-east-1
+      routeTableId: UNKNOWN:RouteTablePublic.status.atProvider.routeTableId
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: RoutePublic_InternetGateway_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: ec2.aws.crossplane.io/v1alpha1
+      kind: Route
+      resourceRef:
+        name: UNKNOWN:RoutePublic.metadata.name
+    of:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: InternetGateway
+      resourceRef:
+        name: UNKNOWN:InternetGateway.metadata.name
+    reason: spec.forProvider.gatewayId = status.atProvider.internetGatewayId
+    replayDeletion: true
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: RoutePublic_RouteTable_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: ec2.aws.crossplane.io/v1alpha1
+      kind: Route
+      resourceRef:
+        name: UNKNOWN:RoutePublic.metadata.name
+    of:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: RouteTable
+      resourceRef:
+        name: UNKNOWN:RouteTablePublic.metadata.name
+    reason: spec.forProvider.routeTableId = status.atProvider.routeTableId
+    replayDeletion: true
+- apiVersion: ec2.aws.crossplane.io/v1beta1
+  kind: RouteTable
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: RouteTablePrivate
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      associations:
+      - subnetId: UNKNOWN:SubnetPrivateA.status.atProvider.subnetId
+      - subnetId: UNKNOWN:SubnetPrivateB.status.atProvider.subnetId
+      - subnetId: UNKNOWN:SubnetPrivateC.status.atProvider.subnetId
+      ignoreRoutes: true
+      region: us-east-1
+      tags:
+      - key: Name
+        value: pythonic-private
+      - key: crossplane-contrib:cloudops
+        value: owned
+      - key: environment
+        value: stage
+      - key: project
+        value: development
+      vpcId: UNKNOWN:VPC.status.atProvider.vpcId
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: RouteTablePrivate_Subnet_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: RouteTable
+      resourceRef:
+        name: UNKNOWN:RouteTablePrivate.metadata.name
+    of:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: Subnet
+      resourceRef:
+        name: UNKNOWN:SubnetPrivateC.metadata.name
+    reason: spec.forProvider.associations[2].subnetId = status.atProvider.subnetId
+    replayDeletion: true
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: RouteTablePrivate_VPC_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: RouteTable
+      resourceRef:
+        name: UNKNOWN:RouteTablePrivate.metadata.name
+    of:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: VPC
+      resourceRef:
+        name: UNKNOWN:VPC.metadata.name
+    reason: spec.forProvider.vpcId = status.atProvider.vpcId
+    replayDeletion: true
+- apiVersion: ec2.aws.crossplane.io/v1beta1
+  kind: RouteTable
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: RouteTablePublic
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      associations:
+      - subnetId: UNKNOWN:SubnetPublicA.status.atProvider.subnetId
+      - subnetId: UNKNOWN:SubnetPublicB.status.atProvider.subnetId
+      - subnetId: UNKNOWN:SubnetPublicC.status.atProvider.subnetId
+      ignoreRoutes: true
+      region: us-east-1
+      tags:
+      - key: Name
+        value: pythonic-public
+      - key: crossplane-contrib:cloudops
+        value: owned
+      - key: environment
+        value: stage
+      - key: project
+        value: development
+      vpcId: UNKNOWN:VPC.status.atProvider.vpcId
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: RouteTablePublic_Subnet_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: RouteTable
+      resourceRef:
+        name: UNKNOWN:RouteTablePublic.metadata.name
+    of:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: Subnet
+      resourceRef:
+        name: UNKNOWN:SubnetPublicC.metadata.name
+    reason: spec.forProvider.associations[2].subnetId = status.atProvider.subnetId
+    replayDeletion: true
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: RouteTablePublic_VPC_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: RouteTable
+      resourceRef:
+        name: UNKNOWN:RouteTablePublic.metadata.name
+    of:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: VPC
+      resourceRef:
+        name: UNKNOWN:VPC.metadata.name
+    reason: spec.forProvider.vpcId = status.atProvider.vpcId
+    replayDeletion: true
+- apiVersion: iam.aws.crossplane.io/v1beta1
+  kind: RolePolicyAttachment
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: RpaClusterPolicy
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      policyArn: arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+      roleName: UNKNOWN:RoleCluster.status.atProvider.roleID
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: RpaClusterPolicy_Role_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: iam.aws.crossplane.io/v1beta1
+      kind: RolePolicyAttachment
+      resourceRef:
+        name: UNKNOWN:RpaClusterPolicy.metadata.name
+    of:
+      apiVersion: iam.aws.crossplane.io/v1beta1
+      kind: Role
+      resourceRef:
+        name: UNKNOWN:RoleCluster.metadata.name
+    reason: spec.forProvider.roleName = status.atProvider.roleID
+    replayDeletion: true
+- apiVersion: iam.aws.crossplane.io/v1beta1
+  kind: RolePolicyAttachment
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: RpaVPCResourceController
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      policyArn: arn:aws:iam::aws:policy/AmazonEKSVPCResourceController
+      roleName: UNKNOWN:RoleCluster.status.atProvider.roleID
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: RpaVPCResourceController_Role_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: iam.aws.crossplane.io/v1beta1
+      kind: RolePolicyAttachment
+      resourceRef:
+        name: UNKNOWN:RpaVPCResourceController.metadata.name
+    of:
+      apiVersion: iam.aws.crossplane.io/v1beta1
+      kind: Role
+      resourceRef:
+        name: UNKNOWN:RoleCluster.metadata.name
+    reason: spec.forProvider.roleName = status.atProvider.roleID
+    replayDeletion: true
+- apiVersion: ec2.aws.crossplane.io/v1beta1
+  kind: Subnet
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: SubnetPrivateA
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      availabilityZone: us-east-1a
+      cidrBlock: 10.0.64.0/18
+      mapPublicIPOnLaunch: false
+      region: us-east-1
+      tags:
+      - key: Name
+        value: pythonic-private-a
+      - key: kubernetes.io/cluster/pythonic
+        value: owned
+      - key: topology.kubernetes.io/zone
+        value: us-east-1a
+      - key: kubernetes.io/role/internal-elb
+        value: '1'
+      - key: crossplane-contrib:cloudops
+        value: owned
+      - key: environment
+        value: stage
+      - key: project
+        value: development
+      vpcId: UNKNOWN:VPC.status.atProvider.vpcId
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: SubnetPrivateA_VPC_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: Subnet
+      resourceRef:
+        name: UNKNOWN:SubnetPrivateA.metadata.name
+    of:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: VPC
+      resourceRef:
+        name: UNKNOWN:VPC.metadata.name
+    reason: spec.forProvider.vpcId = status.atProvider.vpcId
+    replayDeletion: true
+- apiVersion: ec2.aws.crossplane.io/v1beta1
+  kind: Subnet
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: SubnetPrivateB
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      availabilityZone: us-east-1b
+      cidrBlock: 10.0.128.0/18
+      mapPublicIPOnLaunch: false
+      region: us-east-1
+      tags:
+      - key: Name
+        value: pythonic-private-b
+      - key: kubernetes.io/cluster/pythonic
+        value: owned
+      - key: topology.kubernetes.io/zone
+        value: us-east-1b
+      - key: kubernetes.io/role/internal-elb
+        value: '1'
+      - key: crossplane-contrib:cloudops
+        value: owned
+      - key: environment
+        value: stage
+      - key: project
+        value: development
+      vpcId: UNKNOWN:VPC.status.atProvider.vpcId
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: SubnetPrivateB_VPC_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: Subnet
+      resourceRef:
+        name: UNKNOWN:SubnetPrivateB.metadata.name
+    of:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: VPC
+      resourceRef:
+        name: UNKNOWN:VPC.metadata.name
+    reason: spec.forProvider.vpcId = status.atProvider.vpcId
+    replayDeletion: true
+- apiVersion: ec2.aws.crossplane.io/v1beta1
+  kind: Subnet
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: SubnetPrivateC
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      availabilityZone: us-east-1c
+      cidrBlock: 10.0.192.0/18
+      mapPublicIPOnLaunch: false
+      region: us-east-1
+      tags:
+      - key: Name
+        value: pythonic-private-c
+      - key: kubernetes.io/cluster/pythonic
+        value: owned
+      - key: topology.kubernetes.io/zone
+        value: us-east-1c
+      - key: kubernetes.io/role/internal-elb
+        value: '1'
+      - key: crossplane-contrib:cloudops
+        value: owned
+      - key: environment
+        value: stage
+      - key: project
+        value: development
+      vpcId: UNKNOWN:VPC.status.atProvider.vpcId
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: SubnetPrivateC_VPC_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: Subnet
+      resourceRef:
+        name: UNKNOWN:SubnetPrivateC.metadata.name
+    of:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: VPC
+      resourceRef:
+        name: UNKNOWN:VPC.metadata.name
+    reason: spec.forProvider.vpcId = status.atProvider.vpcId
+    replayDeletion: true
+- apiVersion: ec2.aws.crossplane.io/v1beta1
+  kind: Subnet
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: SubnetPublicA
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      availabilityZone: us-east-1a
+      cidrBlock: 10.0.0.0/20
+      mapPublicIPOnLaunch: true
+      region: us-east-1
+      tags:
+      - key: Name
+        value: pythonic-public-a
+      - key: kubernetes.io/cluster/pythonic
+        value: owned
+      - key: topology.kubernetes.io/zone
+        value: us-east-1a
+      - key: kubernetes.io/role/elb
+        value: '1'
+      - key: crossplane-contrib:cloudops
+        value: owned
+      - key: environment
+        value: stage
+      - key: project
+        value: development
+      vpcId: UNKNOWN:VPC.status.atProvider.vpcId
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: SubnetPublicA_VPC_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: Subnet
+      resourceRef:
+        name: UNKNOWN:SubnetPublicA.metadata.name
+    of:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: VPC
+      resourceRef:
+        name: UNKNOWN:VPC.metadata.name
+    reason: spec.forProvider.vpcId = status.atProvider.vpcId
+    replayDeletion: true
+- apiVersion: ec2.aws.crossplane.io/v1beta1
+  kind: Subnet
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: SubnetPublicB
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      availabilityZone: us-east-1b
+      cidrBlock: 10.0.16.0/20
+      mapPublicIPOnLaunch: true
+      region: us-east-1
+      tags:
+      - key: Name
+        value: pythonic-public-b
+      - key: kubernetes.io/cluster/pythonic
+        value: owned
+      - key: topology.kubernetes.io/zone
+        value: us-east-1b
+      - key: kubernetes.io/role/elb
+        value: '1'
+      - key: crossplane-contrib:cloudops
+        value: owned
+      - key: environment
+        value: stage
+      - key: project
+        value: development
+      vpcId: UNKNOWN:VPC.status.atProvider.vpcId
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: SubnetPublicB_VPC_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: Subnet
+      resourceRef:
+        name: UNKNOWN:SubnetPublicB.metadata.name
+    of:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: VPC
+      resourceRef:
+        name: UNKNOWN:VPC.metadata.name
+    reason: spec.forProvider.vpcId = status.atProvider.vpcId
+    replayDeletion: true
+- apiVersion: ec2.aws.crossplane.io/v1beta1
+  kind: Subnet
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: SubnetPublicC
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      availabilityZone: us-east-1c
+      cidrBlock: 10.0.32.0/20
+      mapPublicIPOnLaunch: true
+      region: us-east-1
+      tags:
+      - key: Name
+        value: pythonic-public-c
+      - key: kubernetes.io/cluster/pythonic
+        value: owned
+      - key: topology.kubernetes.io/zone
+        value: us-east-1c
+      - key: kubernetes.io/role/elb
+        value: '1'
+      - key: crossplane-contrib:cloudops
+        value: owned
+      - key: environment
+        value: stage
+      - key: project
+        value: development
+      vpcId: UNKNOWN:VPC.status.atProvider.vpcId
+- apiVersion: protection.crossplane.io/v1beta1
+  kind: ClusterUsage
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: SubnetPublicC_VPC_<<UNKNOWN>>
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    by:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: Subnet
+      resourceRef:
+        name: UNKNOWN:SubnetPublicC.metadata.name
+    of:
+      apiVersion: ec2.aws.crossplane.io/v1beta1
+      kind: VPC
+      resourceRef:
+        name: UNKNOWN:VPC.metadata.name
+    reason: spec.forProvider.vpcId = status.atProvider.vpcId
+    replayDeletion: true
+- apiVersion: ec2.aws.crossplane.io/v1beta1
+  kind: VPC
+  metadata:
+    annotations:
+      crossplane.io/composition-resource-name: VPC
+    generateName: pythonic-
+    labels:
+      crossplane.io/composite: pythonic
+    ownerReferences:
+    - apiVersion: pythonic.crossplane.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: EksCluster
+      name: pythonic
+      uid: ''
+  ready: null
+  spec:
+    forProvider:
+      cidrBlock: 10.0.0.0/16
+      enableDnsHostNames: true
+      enableDnsSupport: true
+      region: us-east-1
+      tags:
+      - key: Name
+        value: pythonic
+      - key: crossplane-contrib:cloudops
+        value: owned
+      - key: environment
+        value: stage
+      - key: project
+        value: development
+results:
+- apiVersion: render.crossplane.io/v1beta1
+  kind: Result
+  message: 'Desired resources with unknowns: Cluster,Cluster_Role_<<UNKNOWN>>,Cluster_Subnet_<<UNKNOWN>>,InternetGateway,InternetGateway_VPC_<<UNKNOWN>>,NATGateway,NATGateway_Address_<<UNKNOWN>>,NATGateway_Subnet_<<UNKNOWN>>,RoutePrivate,RoutePrivate_NATGateway_<<UNKNOWN>>,RoutePrivate_RouteTable_<<UNKNOWN>>,RoutePublic,RoutePublic_InternetGateway_<<UNKNOWN>>,RoutePublic_RouteTable_<<UNKNOWN>>,RouteTablePrivate,RouteTablePrivate_Subnet_<<UNKNOWN>>,RouteTablePrivate_VPC_<<UNKNOWN>>,RouteTablePublic,RouteTablePublic_Subnet_<<UNKNOWN>>,RouteTablePublic_VPC_<<UNKNOWN>>,RpaClusterPolicy,RpaClusterPolicy_Role_<<UNKNOWN>>,RpaVPCResourceController,RpaVPCResourceController_Role_<<UNKNOWN>>,SubnetPrivateA,SubnetPrivateA_VPC_<<UNKNOWN>>,SubnetPrivateB,SubnetPrivateB_VPC_<<UNKNOWN>>,SubnetPrivateC,SubnetPrivateC_VPC_<<UNKNOWN>>,SubnetPublicA,SubnetPublicA_VPC_<<UNKNOWN>>,SubnetPublicB,SubnetPublicB_VPC_<<UNKNOWN>>,SubnetPublicC,SubnetPublicC_VPC_<<UNKNOWN>>'
+  reason: DesiredUnknowns
+  severity: SEVERITY_NORMAL
+  step: render-templates
