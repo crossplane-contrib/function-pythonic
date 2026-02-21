@@ -1,0 +1,43 @@
+site_name: function-pythonic
+site_description: Documentation for Crossplane function-pythonic
+site_url: https://crossplane-contrib.github.io/function-pythonic/
+repo_url: https://github.com/crossplane-contrib/function-pythonic
+repo_name: crossplane-contrib/function-pythonic
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    primary: blue
+    accent: cyan
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Introduction: introduction.md
+  - Examples: examples.md
+  - Installing function-pythonic: installing-function-pythonic.md
+  - Composed Resource Dependencies: composed-resource-dependencies.md
+  - Explicit Dependencies: explicit-dependencies.md
+  - Usage Dependencies: usage-dependencies.md
+  - Pythonic access of Protobuf Messages: pythonic-access-of-protobuf-messages.md
+  - Composite Composition: composite-composition.md
+  - Single use Composites: single-use-composites.md
+  - Quick Start Development: quick-start-development.md
+  - ConfigMap Packages: configmap-packages.md
+  - Step Parameters: step-parameters.md
+  - Filing System Packages: filing-system-packages.md
+  - Install Additional Python Packages: install-additional-python-packages.md
+  - Enable Oversize Protos: enable-oversize-protos.md
+
+strict: true
