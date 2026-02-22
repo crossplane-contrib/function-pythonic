@@ -173,6 +173,11 @@ subnet.spec.forProvider.cidrBlock = '10.0.0.0/20'
 ```
 Will generate the appropriate Crossplane Usage resource.
 
+## API Documentation
+
+- [Composite API (`composite.py`)](https://github.com/crossplane-contrib/function-pythonic/blob/main/docs/composite.md)
+- [Protobuf Wrapper API (`protobuf.py`)](https://github.com/crossplane-contrib/function-pythonic/blob/main/docs/protobuf.md)
+
 ## Pythonic access of Protobuf Messages
 
 All Protobuf messages are wrapped by a set of python classes which enable using
