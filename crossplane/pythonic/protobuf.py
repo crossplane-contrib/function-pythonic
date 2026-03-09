@@ -796,8 +796,10 @@ class Value:
     def __contains__(self, item):
         match self._kind:
             case 'struct_value':
+                item = self._validate_key(item)
                 return item in self._value.struct_value.fields or item in self._unknowns
             case 'Struct':
+                item = self._validate_key(item)
                 return item in self._value.fields or item in self._unknowns
             case 'list_value' | 'ListValue':
                 for value in self:

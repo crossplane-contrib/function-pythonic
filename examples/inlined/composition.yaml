@@ -1,0 +1,17 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: steps.inlined.example.org
+spec:
+  compositeTypeRef:
+    apiVersion: inlined.example.org/v1alpha1
+    kind: Step
+  mode: Pipeline
+  pipeline:
+  - step: inlined
+    functionRef:
+      name: function-pythonic
+    input:
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
+      kind: Composite
+      inlined: composite

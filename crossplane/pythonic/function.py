@@ -48,15 +48,13 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         name.append(composite['metadata']['name'])
         logger = logging.getLogger('.'.join(name))
 
-        if composite['apiVersion'] in ('pythonic.crossplane.io/v1alpha1', 'pythonic.fortra.com/v1alpha1') and composite['kind'] == 'Composite':
-            if 'spec' not in composite or 'composite' not in composite['spec']:
-                return self.fatal(request, logger, 'Missing spec "composite"')
-            single_use = True
-            composite = composite['spec']['composite']
+        if 'inlined' in request.input and request.input['inlined']:
+            if 'spec' not in composite or request.input['inlined'] not in composite['spec']:
+                return self.fatal(request, logger, f"Missing inlined spec.{request.input['inlined']}")
+            composite = composite['spec'][request.input['inlined']]
         else:
             if 'composite' not in request.input:
                 return self.fatal(request, logger, 'Missing input "composite"')
-            single_use = False
             composite = request.input['composite']
 
         # Ideally this is something the Function API provides
@@ -100,7 +98,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
             self.clazzes[composite] = clazz
 
         try:
-            composite = clazz(self.crossplane_v1, request, single_use, logger)
+            composite = clazz(self.crossplane_v1, request, logger)
         except Exception as e:
             return self.fatal(request, logger, 'Instantiate', e)
 

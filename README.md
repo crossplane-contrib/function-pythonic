@@ -385,25 +385,78 @@ optionally to the Claim.
 | Result.message | String | Human-readable details about the result |
 | Result.claim | Boolean | Also apply the result to the claim |
 
-## Single use Composites
+## Inlined Composites
 
 Tired of creating a CompositeResourceDefinition, a Composition, and a Composite
-just to run that Composition once in a single use or initialize task?
+just to run that Composition once in a setup or initialize task?
 
-function-pythonic installs a `Composite` CompositeResourceDefinition that enables
-creating such tasks using a single Composite resource:
+function-pythonic supports "inlined" Compositions, where the python module
+is obtained from a field in the Composite's spec.
 ```yaml
-apiVersion: pythonic.fn.crossplane.io/v1alpha1
-kind: Composite
+apiVersion: inlined.example.org/v1alpha1
+kind: Step
 metadata:
-  name: composite-example
+  name: inlined-example
 spec:
   composite: |
     class HelloComposite(BaseComposite):
       def compose(self):
-        self.status.composite = 'Hello, World!'
+        self.status.step = 'Hello, World!'
 ```
-
+The CompositeResourceDefinition and Composition to support the above example:
+```yaml
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: inlined.example.org/v1alpha1
+spec:
+  group: inlined.example.org
+  names:
+    kind: Step
+    plural: steps
+  defaultCompositionRef:
+    name: steps.inlined.example.org
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              composite:
+                type: string
+                description: 'A Python module that defines a class with the signature: class Composite(BaseComposite)'
+            required:
+            - composite
+          status:
+            type: object
+            properties:
+              composite:
+                x-kubernetes-preserve-unknown-fields: true
+```
+```yaml
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: steps.inlined.example.org
+spec:
+  compositeTypeRef:
+    apiVersion: inlined.example.org/v1alpha1
+    kind: Step
+  mode: Pipeline
+  pipeline:
+  - step: inlined
+    functionRef:
+      name: function-pythonic
+    input:
+      apiVersion: pythonic.fn.crossplane.io/v1alpha1
+      kind: Composite
+      inlined: composite
+```
 ## Quick Start Development
 
 function-pythonic includes a pure python implementation of the `crossplane render ...`

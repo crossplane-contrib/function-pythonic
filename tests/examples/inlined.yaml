@@ -1,6 +1,6 @@
 composite:
-  apiVersion: pythonic.crossplane.io/v1alpha1
-  kind: Composite
+  apiVersion: inlined.example.org/v1alpha1
+  kind: Step
   status:
     composite: Hello, World!
     conditions:
@@ -22,7 +22,7 @@ context:
   kind: Context
   values:
     _pythonic:
-      function-pythonic-render:
+      inlined:
         iteration: 1
     iteration: 1
 resources: []

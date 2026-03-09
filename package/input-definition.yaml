@@ -36,7 +36,7 @@ spec:
                 description: 'Composed resource name to use, default: pythonic-connection-secret'
                 type: string
               name:
-                description: Name of the connection secret. If not specified, defaults to {xr-name}-connection.
+                description: Name of the connection secret. If not specified, defaults to {xr-name}-connection
                 type: string
               namespace:
                 description: |-
@@ -49,64 +49,9 @@ spec:
             x-kubernetes-preserve-unknown-fields: true
           composite:
             type: string
-            description: 'A Python module that defines a class with the signature: class Composite(BaseComposite)'
-        required:
-        - composite
-    served: true
-    storage: true
----
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: composites.pythonic.fn.fortra.com
-spec:
-  group: pythonic.fn.fortra.com
-  names:
-    categories:
-    - crossplane
-    kind: Composite
-    listKind: CompositeList
-    plural: composites
-    singular: composite
-  scope: Namespaced
-  versions:
-  - name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        type: object
-        description: A Python script for composing Crossplane Composites
-        properties:
-          apiVersion:
+            description: 'Python module that defines a class with the signature: class Composite(BaseComposite)'
+          inlined:
             type: string
-            description: Crossplane Composition Pipeline Function Input Api Version
-          kind:
-            type: string
-            description: Crossplane Composition Pipeline Function Input Kind
-          step:
-            type: string
-            description: Optional step name used in logging
-          writeConnectionSecretToRef:
-            type: object
-            properties:
-              resourceName:
-                description: 'Composed resource name to use, default: pythonic-connection-secret'
-                type: string
-              name:
-                description: Name of the connection secret. If not specified, defaults to {xr-name}-connection.
-                type: string
-              namespace:
-                description: |-
-                  Namespace of the connection secret. If not specified for namespaced XRs,
-                  Crossplane will default it to the XR's namespace. For cluster-scoped XRs,
-                  namespace must be explicitly provided.
-                type: string
-          parameters:
-            type: object
-            x-kubernetes-preserve-unknown-fields: true
-          composite:
-            type: string
-            description: 'A Python module that defines a class with the signature: class Composite(BaseComposite)'
-        required:
-        - composite
+            description: Inlined Composition, the python module is retrieved from the Composite's spec field specified
     served: true
     storage: true

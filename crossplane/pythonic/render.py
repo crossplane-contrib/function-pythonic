@@ -3,6 +3,7 @@ import asyncio
 import importlib
 import inflect
 import inspect
+import kr8s
 import logging
 import pathlib
 import sys
@@ -15,6 +16,9 @@ from . import (
     function,
     protobuf,
 )
+
+INFLECT = inflect.engine()
+INFLECT.classical(all=False)
 
 
 class Command(command.Command):
@@ -54,7 +58,7 @@ class Command(command.Command):
             action='append',
             default=[],
             metavar='KEY=VALUE',
-            help='Context key-value pairs to pass to the Function pipeline. Values must be YAML/JSON. Keys take precedence over --context-files.',
+            help='Context key-value pairs to pass to the Function pipeline. Values must be sYAML/JSON. Keys take precedence over --context-files.',
         )
         parser.add_argument(
             '--observed-resources', '-o',
@@ -108,18 +112,18 @@ class Command(command.Command):
 
     async def run(self):
         if self.args.kube_context:
-            kapi = Kr8sApi(self.args.kube_context, self.logger)
+            api = await kr8s.asyncio.api(context=self.args.kube_context)
         else:
-            kapi = None
-        composite = await self.setup_composite(kapi)
+            api = None
+        composite = await self.setup_composite(api)
         observed = self.collect_resources(self.args.observed_resources)
-        composition = await self.setup_composition(composite, kapi)
+        composition = await self.setup_composition(composite, api)
         resources = self.collect_resources(self.args.required_resources)
         resources += self.collect_resources(self.args.secret_store)
         resources.sort(key=lambda resource: str(resource.metadata.name))
         context = self.setup_context()
 
-        render = await self.render(composite, observed, composition, resources, context, kapi, self.args.render_unknowns, self.args.crossplane_v1)
+        render = await self.render(composite, observed, composition, resources, context, api, self.args.render_unknowns, self.args.crossplane_v1)
         if not render:
             sys.exit(1)
 
@@ -154,11 +158,11 @@ class Command(command.Command):
             print('---')
             print(str(render.context), end='')
 
-    async def setup_composite(self, kapi=None):
+    async def setup_composite(self, api=None):
         # Obtain the Composite to render.
         if self.args.composite.is_file():
             return protobuf.Yaml(self.args.composite.read_text())
-        if not kapi:
+        if not api:
             print(f"Composite \"{self.args.composite}\" is not a file", file=sys.stderr)
             sys.exit(1)
         composite = str(self.args.composite).split(':')
@@ -172,13 +176,13 @@ class Command(command.Command):
         else:
             print(f"Composite \"{self.args.composite}\" is not kind:apiVersion:namespace:name", file=sys.stderr)
             sys.exit(1)
-        composite = await kapi.get(composite[0], composite[1], namespace, composite[-1])
+        composite = await self.kr8s_get(api, composite[0], composite[1], namespace, composite[-1])
         if not composite:
             print(f"Composite \"{self.args.composite}\" not found", file=sys.stderr)
             sys.exit(1)
         return composite
 
-    async def setup_composition(self, composite, kapi=None):
+    async def setup_composition(self, composite, api=None):
         # Obtain the Composition that will be used to render the Composite.
         if not self.args.composition:
             return None
@@ -265,35 +269,35 @@ class Command(command.Command):
             context[key_value[0]] = protobuf.Yaml(key_value[1])
         return context
 
-    async def render(self, composite, observed=[], composition=None, resources=[], context=None, kapi=None, render_unknowns=False, crossplane_v1=False):
+    async def render(self, composite, observed=[], composition=None, resources=[], context=None, api=None, render_unknowns=False, crossplane_v1=False, composite_observeds=True):
         # Create the request used when running Composition steps.
         request = protobuf.Message(None, 'request', fnv1.RunFunctionRequest.DESCRIPTOR, fnv1.RunFunctionRequest())
         if context is not None:
             request.context = context
 
         # Establish the request observed composite.
-        await self.set_resource(composite, request.observed.composite, resources, kapi)
+        await self.set_resource(composite, request.observed.composite, resources, api)
         # Establish the manually configured observed resources.
         if observed:
             async with asyncio.TaskGroup() as group:
                 for resource in observed:
                     name = resource.metadata.annotations['crossplane.io/composition-resource-name']
                     if name:
-                        group.create_task(self.set_resource(resource, request.observed.resources[name], resources, kapi))
-        if kapi:
+                        group.create_task(self.set_resource(resource, request.observed.resources[name], resources, api))
+        if api and composite_observeds:
             refs = composite.spec.crossplane.resourceRefs
             if not refs:
                 refs = composite.spec.resourceRefs
             if refs:
                 async with asyncio.TaskGroup() as group:
                     for ref in refs:
-                        group.create_task(self.get_composite_ref(composite, ref, request, resources, kapi))
+                        group.create_task(self.get_composite_ref(composite, ref, request, resources, api))
 
         if not composition:
             if composite.apiVersion in ('pythonic.crossplane.io/v1alpha1', 'pythonic.fortra.com/v1alpha1') and composite.kind == 'Composite':
                 composition = self.create_composition(composite)
             else:
-                if not kapi:
+                if not api:
                     print('"composition" required', file=sys.stderr)
                     return None
                 revision = composite.spec.crossplane.compositionRevisionRef
@@ -303,7 +307,7 @@ class Command(command.Command):
                     if not revision.name:
                         print('Composite does not contain a CompositionRevision name', file=sys.stderr)
                         return None
-                composition = await kapi.get('CompositionRevision', 'apiextensions.crossplane.io/v1', None, revision.name)
+                composition = await self.kr8s_get(api, 'CompositionRevision', 'apiextensions.crossplane.io/v1', None, revision.name)
                 if not composition:
                     print(f"Compositioin \"{revision.name}\" not found", file=sys.stderr)
                     return None
@@ -350,14 +354,14 @@ class Command(command.Command):
                 # Fetch the step bootstrap resources specified.
                 request.required_resources()
                 for requirement in step.requirements.requiredResources:
-                    await self.set_required(requirement.requirementName, requirement, request.required_resources, resources, kapi)
+                    await self.set_required(requirement.requirementName, requirement, request.required_resources, resources, api)
                 # Fetch the required resources requested.
                 for name, selector in requirements.resources:
-                    await self.set_required(name, selector, request.required_resources, resources, kapi)
+                    await self.set_required(name, selector, request.required_resources, resources, api)
                 # Fetch the now deprecated extra resources requested.
                 request.extra_resources()
                 for name, selector in requirements.extra_resources:
-                    await self.set_required(name, selector, request.extra_resources, resources, kapi)
+                    await self.set_required(name, selector, request.extra_resources, resources, api)
                 # Run the step using the function-pythonic function runner.
                 response = protobuf.Message(
                     None,
@@ -365,13 +369,15 @@ class Command(command.Command):
                     fnv1.RunFunctionResponse.DESCRIPTOR,
                     await runner.RunFunction(request._message, None),
                 )
+                # Copy the response context to the request context to use in subsequent steps.
+                request.context = response.context
                 # All done if there is a fatal result.
                 for result in response.results:
                     if result.severity == fnv1.Severity.SEVERITY_FATAL:
                         fatal = True
                         break
-                # Copy the response context to the request context to use in subsequent steps.
-                request.context = response.context
+                if fatal:
+                    break
                 # Exit this loop if the function has not requested additional extra/required resources.
                 if response.requirements == requirements:
                     break
@@ -479,21 +485,21 @@ class Command(command.Command):
             ),
         )
 
-    async def get_composite_ref(self, composite, ref, request, resources, kapi):
+    async def get_composite_ref(self, composite, ref, request, resources, api):
         namespace = ref.namespace
         if not namespace:
             namespace = composite.metadata.namespace
             if not namespace:
                 namespace = None
-        source = await kapi.get(ref.kind, ref.apiVersion, namespace, ref.name)
+        source = await self.kr8s_get(api, ref.kind, ref.apiVersion, namespace, ref.name)
         if source:
             name = source.metadata.annotations['crossplane.io/composition-resource-name']
             if name:
                 destination = request.observed.resources[name]
                 if not destination: # Do not override manual observed
-                    await self.set_resource(source, destination, resources, kapi)
+                    await self.set_resource(source, destination, resources, api)
 
-    async def set_required(self, name, selector, requireds, resources=[], kapi=None):
+    async def set_required(self, name, selector, requireds, resources=[], api=None):
         if not name:
             return
         name = str(name)
@@ -505,23 +511,23 @@ class Command(command.Command):
                     or (selector.namespace == resource.metadata.namespace)
                     ):
                     if selector.match_name == resource.metadata.name:
-                        await self.set_resource(resource, items[protobuf.append], resources, kapi)
+                        await self.set_resource(resource, items[protobuf.append], resources, api)
                     elif selector.match_labels.labels:
                         for key, value in selector.match_labels.labels:
                             if value != resource.metadata.labels[key]:
                                 break
                         else:
-                            await self.set_resource(resource, items[protobuf.append], resources, kapi)
-        if not len(items) and kapi:
+                            await self.set_resource(resource, items[protobuf.append], resources, api)
+        if not len(items) and api:
             if len(selector.match_name):
-                resource = await kapi.get(selector.kind, selector.api_version, selector.namespace, selector.match_name)
+                resource = await self.kr8s_get(api, selector.kind, selector.api_version, selector.namespace, selector.match_name)
                 if resource:
-                    await self.set_resource(resource, items[protobuf.append], resources, kapi)
+                    await self.set_resource(resource, items[protobuf.append], resources, api)
             elif len(selector.match_labels.labels):
-                for resource in await kapi.list(selector.kind, selector.api_version, selector.namespace, selector.match_labels.labels):
-                    await self.set_resource(resource, items[protobuf.append], resources, kapi)
+                for resource in await self.kr8s_list(api, selector.kind, selector.api_version, selector.namespace, selector.match_labels.labels):
+                    await self.set_resource(resource, items[protobuf.append], resources, api)
 
-    async def set_resource(self, source, destination, resources=[], kapi=None):
+    async def set_resource(self, source, destination, resources=[], api=None):
         destination.resource = source
         namespace = source.spec.writeConnectionSecretToRef.namespace or source.metadata.namespace
         name = source.spec.writeConnectionSecretToRef.name
@@ -533,8 +539,8 @@ class Command(command.Command):
                         connection = resource
                         break
             else:
-                if kapi:
-                    connection = await kapi.get('Secret', 'v1', namespace, name)
+                if api:
+                    connection = await self.kr8s_get(api, 'Secret', 'v1', namespace, name)
             if connection:
                 destination.connection_details()
                 for key, value in connection.data:
@@ -572,69 +578,53 @@ class Command(command.Command):
             condition['message'] = message
         return condition
 
-
-class Kr8sApi:
-    def __init__(self, context=None, logger=None):
-        self.kr8s = importlib.import_module('kr8s')
-        self.inflect = inflect.engine()
-        self.inflect.classical(all=False)
-        self.context = context
-        self.logger = logger
-        self._api = None
-
-    async def api(self):
-        if not self._api:
-            self._api = await self.kr8s.asyncio.api(context=self.context)
-        return self._api
-
-    async def get(self, kind, apiVersion, namespace, name):
-        clazz = self._get_clazz(kind, apiVersion, namespace)
+    async def kr8s_get(self, api, kind, apiVersion, namespace, name):
+        namespaced = namespace and len(namespace)
+        clazz = self.kr8s_class(kind, apiVersion, namespaced)
         try:
             fullName = [str(kind), str(apiVersion), str(name)]
-            if namespace and len(namespace):
+            if namespaced:
                 fullName.insert(-1, str(namespace))
-                resource = await clazz.get(str(name), namespace=str(namespace), api=await self.api())
+                resource = await clazz.get(str(name), namespace=str(namespace), api=api)
             else:
-                resource = await clazz.get(str(name), api=await self.api())
+                resource = await clazz.get(str(name), api=api)
             resource = protobuf.Value(None, None, resource.raw)
             result = 'found'
-        except self.kr8s.NotFoundError:
+        except kr8s.NotFoundError:
             resource = None
             result = 'missing'
-        if self.logger:
-            self.logger.debug(f"Resource {result}: {':'.join(fullName)}")
+        self.logger.debug(f"Resource {result}: {':'.join(fullName)}")
         return resource
 
-    async def list(self, kind, apiVersion, namespace, labelSelector):
-        clazz = self._get_clazz(kind, apiVersion, namespace)
+    async def kr8s_list(self, api, kind, apiVersion, namespace, labelSelector):
+        namespaced = namespace and len(namespace)
+        clazz = self.kr8s_class(kind, apiVersion, namespaced)
         resources = [
             protobuf.Value(None, None, resource.raw)
             async for resource in clazz.list(
-                namespace=str(namespace) if namespace and len(namespace) else None,
-                label_selector={
-                    label: str(value)
-                    for label, value in labelSelector
-                },
-                api=await self.api()
+                    namespace=str(namespace) if namespaced else None,
+                    label_selector={
+                        label: str(value)
+                        for label, value in labelSelector
+                    },
+                    api=api,
             )
         ]
         if self.logger.isEnabledFor(logging.DEBUG):
             fullName = [str(kind), str(apiVersion)]
-            if namespace and len(namespace):
+            if namespaced:
                 fullName.append(str(namespace))
             fullName.append('&'.join(f"{label}={value}" for label, value in labelSelector))
             if resources:
-                result = f"found {self.inflect.number_to_words(len(resources))}"
+                result = f"found {INFLECT.number_to_words(len(resources))}"
             else:
                 result = 'missing'
             self.logger.debug(f"Resources {result}: {':'.join(fullName)}")
         return resources
 
-    def _get_clazz(self, kind, apiVersion, namespaced):
-        kind = str(kind)
-        apiVersion = str(apiVersion)
+    def kr8s_class(self, kind, apiVersion, namespaced):
         try:
-            return self.kr8s.asyncio.objects.get_class(kind, apiVersion, True)
+            return kr8s.asyncio.objects.get_class(str(kind), str(apiVersion), True)
         except KeyError:
             pass
-        return self.kr8s.asyncio.objects.new_class(kind, apiVersion, True, bool(namespaced) and len(namespaced), plural=self.inflect.plural_noun(kind))
+        return kr8s.asyncio.objects.new_class(str(kind), str(apiVersion), True, namespaced, plural=INFLECT.plural_noun(str(kind)).lower())

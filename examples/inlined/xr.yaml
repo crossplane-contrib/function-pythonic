@@ -1,7 +1,7 @@
-apiVersion: pythonic.crossplane.io/v1alpha1
-kind: Composite
+apiVersion: inlined.example.org/v1alpha1
+kind: Step
 metadata:
-  name: composite-example
+  name: inlined-example
 spec:
   composite: |
     class Composite(BaseComposite):

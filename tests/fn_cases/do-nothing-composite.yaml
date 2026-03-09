@@ -2,8 +2,8 @@ request:
   observed:
     composite:
       resource:
-        apiVersion: pythonic.crossplane.io/v1alpha1
-        kind: Composite
+        apiVersion: pytest.crossplane.io/v1alpha1
+        kind: Step
         spec:
           composite: |
             class DoNothingComposite(BaseComposite):
@@ -11,3 +11,4 @@ request:
                 pass
   input:
     step: pytest
+    inlined: composite

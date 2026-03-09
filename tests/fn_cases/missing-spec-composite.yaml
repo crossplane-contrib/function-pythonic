@@ -2,10 +2,11 @@ request:
   observed:
     composite:
       resource:
-        apiVersion: pythonic.crossplane.io/v1alpha1
-        kind: Composite
+        apiVersion: pytest.crossplane.io/v1alpha1
+        kind: Step
   input:
     step: pytest
+    inlined: composite    
 
 response:
   meta:
@@ -14,5 +15,5 @@ response:
   desired: null
   conditions: null
   results:
-  - message: Missing spec "composite"
+  - message: Missing inlined spec.composite
     severity: 1

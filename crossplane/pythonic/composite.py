@@ -89,7 +89,7 @@ class Ready:
 
 
 class BaseComposite:
-    def __init__(self, crossplane_v1, request, single_use, logger):
+    def __init__(self, crossplane_v1, request, logger):
         self.crossplane_v1 = crossplane_v1
         self.request = protobuf.Message(None, 'request', request.DESCRIPTOR, request, 'Function Request')
         response = fnv1.RunFunctionResponse(
@@ -104,10 +104,7 @@ class BaseComposite:
         )
         self.response = protobuf.Message(None, 'response', response.DESCRIPTOR, response)
         self.logger = logger
-        if single_use:
-            self.parameters = self.request.observed.composite.resource.spec.parameters
-        else:
-            self.parameters = self.request.input.parameters
+        self.parameters = self.request.input.parameters
         self.credentials = Credentials(self.request)
         self.context = self.response.context
         self.environment = self.context['apiextensions.crossplane.io/environment']

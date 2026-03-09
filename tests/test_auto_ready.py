@@ -39,7 +39,7 @@ def test(id, test):
             },
         ),
     )
-    composite_test = composite.BaseComposite(False, request, False, logger)
+    composite_test = composite.BaseComposite(False, request, logger)
     ready = composite_test.resources[id].ready
     if ready is None:
         message = 'Ready is not set'
