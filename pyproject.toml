@@ -56,7 +56,7 @@ only-include = [
 features = ["packages"]
 type = "virtual"
 path = ".venv-default"
-dependencies = ["ipython==9.1.0"]
+dependencies = ["ipython==9.11.0"]
 packages = ["crossplane"]
 [tool.hatch.envs.default.scripts]
 production = "python -m crossplane.pythonic.main grpc --insecure"
@@ -68,7 +68,7 @@ packages = "python -m crossplane.pythonic.main grpc --insecure --debug --render-
 type = "virtual"
 detached = true
 path = ".venv-lint"
-dependencies = ["ruff==0.11.5"]
+dependencies = ["ruff==0.15.7"]
 packages = ["crossplane"]
 [tool.hatch.envs.lint.scripts]
 check = "ruff check crossplane tests && ruff format --diff crossplane tests"
@@ -78,9 +78,9 @@ type = "virtual"
 path = ".venv-test"
 dependencies = [
   "grpcio-tools==1.76.0",
-  "pytest==8.4.1",
-  "pytest-asyncio==1.1.0",
-  "pytest-cov==6.2.1",
+  "pytest==9.0.2",
+  "pytest-asyncio==1.3.0",
+  "pytest-cov==7.1.0",
 ]
 packages = ["crossplane"]
 [tool.hatch.envs.test.scripts]
@@ -89,7 +89,7 @@ protobuf = "python -m pytest tests/test_protobuf_*.py -x --verbose --verbose --c
 ci = "python -m pytest tests --verbose --verbose --junitxml=reports/pytest-junit.xml --cov --cov-report=term --cov-report=xml:reports/pytest-coverage.xml"
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py314"
 exclude = ["crossplane/pythonic/proto/*"]
 
 [tool.ruff.lint]

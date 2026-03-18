@@ -26,7 +26,7 @@ context:
         iteration: 2
         requireds:
           example-config:
-            apiVersion: apiextensions.crossplane.io/v1alpha1
+            apiVersion: apiextensions.crossplane.io/v1beta1
             kind: EnvironmentConfig
             matchName: example-config
     apiextensions.crossplane.io/environment:

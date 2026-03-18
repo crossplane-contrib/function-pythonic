@@ -104,11 +104,13 @@ class BaseComposite:
         )
         self.response = protobuf.Message(None, 'response', response.DESCRIPTOR, response)
         self.logger = logger
+        self.capabilities = Capabilities(self.request.meta.capabilities)
         self.parameters = self.request.input.parameters
         self.credentials = Credentials(self.request)
         self.context = self.response.context
         self.environment = self.context['apiextensions.crossplane.io/environment']
         self.requireds = Requireds(self)
+        self.schemas = Schemas(self)
         self.resources = Resources(self)
         self.autoReady = True
         self.usages = False
@@ -123,6 +125,7 @@ class BaseComposite:
         self.metadata = self.observed.metadata
         self.spec = self.observed.spec
         self.status = self.desired.status
+        self.output = self.response.output
         self.conditions = Conditions(observed, self.response)
         self.results = Results(self.response)
         self.events = Results(self.response) # Deprecated, use self.results
@@ -134,6 +137,30 @@ class BaseComposite:
 
     async def compose(self):
         raise NotImplementedError()
+
+
+class Capabilities:
+    def __init__(self, capabilities):
+        self._capabilities = capabilities
+
+    def __bool__(self):
+        return fnv1.CAPABILITY_CAPABILITIES in self._capabilities
+
+    @property
+    def requireds(self):
+        return fnv1.CAPABILITY_REQUIRED_RESOURCES in self._capabilities if self else None
+
+    @property
+    def schemas(self):
+        return fnv1.CAPABILITY_REQUIRED_SCHEMAS in self._capabilities if self else None
+
+    @property
+    def credentials(self):
+        return fnv1.CAPABILITY_CREDENTIALS in self._capabilities if self else None
+
+    @property
+    def conditions(self):
+        return fnv1.CAPABILITY_CONDITIONS in self._capabilities if self else None
 
 
 class Credentials:
@@ -537,6 +564,150 @@ class RequiredResources:
     def __iter__(self):
         for ix in range(len(self)):
             yield self[ix]
+
+
+class RequiredResource:
+    def __init__(self, name, ix, resource):
+        self.name = name
+        self.ix = ix
+        self.observed = resource.resource
+        self.apiVersion = self.observed.apiVersion
+        self.kind = self.observed.kind
+        self.metadata = self.observed.metadata
+        self.spec = self.observed.spec
+        self.type = self.observed.type
+        self.data = self.observed.data
+        self.status = self.observed.status
+        self.conditions = Conditions(resource)
+        self.connection = self.observed.connection_details
+
+    def __bool__(self):
+        return bool(self.observed)
+
+
+class Schemas:
+    def __init__(self, composite):
+        self._composite = composite
+        self._cache = {}
+
+    def __getattr__(self, key):
+        return self[key]
+
+    def __getitem__(self, key):
+        schema = self._cache.get(key)
+        if not schema:
+            schema = Schema(self._composite, key)
+            self._cache[key] = schema
+        return schema
+
+    def __bool__(self):
+        return bool(len(self))
+
+    def __len__(self):
+        names = set()
+        for name, schema in self._composite.request.required_schemas:
+            names.add(name)
+        for name, selector in self._composite.response.requirements.schemas:
+            names.add(name)
+        return len(names)
+
+    def __contains__(self, key):
+        if key in self._composite.request.required_schemas:
+            return True
+        if key in self._composite.response.requirements.schemas:
+            return True
+        return False
+
+    def __iter__(self):
+        names = set()
+        for name, schema in self._composite.request.required_schemas:
+            names.add(name)
+        for name, selector in self._composite.response.requirements.schemas:
+            names.add(name)
+        for name in sorted(names):
+            yield name, self[name]
+
+
+class Schema:
+    def __init__(self, composite, name):
+        self.name = name
+        self._selector = composite.response.requirements.schemas[name]
+        self._schema = composite.request.required_schemas[name].openapi_v3
+
+    def __call__(self, kind=_notset, apiVersion=_notset):
+        self._selector()
+        if kind != _notset:
+            # Allow for apiVersion in the first arg and kind in the second arg
+            if '/' in kind or kind == 'v1':
+                if apiVersion != _notset:
+                    self.kind = apiVersion
+                apiVersion = kind
+            else:
+                self.kind = kind
+        if apiVersion != _notset:
+            self.apiVersion = apiVersion
+        return self
+
+    @property
+    def apiVersion(self):
+        return self._selector.api_version
+
+    @apiVersion.setter
+    def apiVersion(self, apiVersion):
+        self._selector.api_version = apiVersion
+
+    @property
+    def kind(self):
+        return self._selector.kind
+
+    @kind.setter
+    def kind(self, kind):
+        self._selector.kind = kind
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+    def __aenter__(self):
+        return self
+
+    def __aexit__(self, exc_type, exc_value, traceback):
+        pass
+
+    def __getattr__(self, key):
+        return self[key]
+
+    def __getitem__(self, key):
+        return self._schema[key]
+
+    def __bool__(self):
+        return bool(self._schema)
+
+    def __len__(self):
+        return len(self._schema)
+
+    def __contains__(self, item):
+        return item in self._schema
+
+    def __iter__(self):
+        for key, value in self._schema:
+            yield key, value
+
+    def __hash__(self):
+        return hash(self._schema)
+
+    def __eq__(self, other):
+        if instance(other, Schema):
+            other = other._schema
+        return self._schema == other
+
+    def __str__(self):
+        return str(self._schema)
+
+    def __format__(self, spec='yaml'):
+        return format(self,_schema, spec)
 
 
 class RequiredResource:

@@ -20,7 +20,7 @@ spec:
           def compose(self):
             self.environment.complex = self.requireds['example-config'](
               'EnvironmentConfig',
-              'apiextensions.crossplane.io/v1alpha1',
+              'apiextensions.crossplane.io/v1beta1',
               name='example-config',
             )[0].data.complex
             self.environment.update = 'environment'

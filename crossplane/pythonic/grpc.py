@@ -45,6 +45,12 @@ class Command(command.Command):
         parser.add_argument(
             '--packages',
             action='store_true',
+            dest='packages_configmaps',
+            help='Discover python packages from function-pythonic ConfigMaps, deprecated use --packages-configmaps'
+        )
+        parser.add_argument(
+            '--packages-configmaps',
+            action='store_true',
             help='Discover python packages from function-pythonic ConfigMaps.'
         )
         parser.add_argument(
@@ -57,7 +63,17 @@ class Command(command.Command):
             action='append',
             default=[],
             metavar='NAMESPACE',
-            help='Namespaces to discover function-pythonic ConfigMaps in, default is cluster wide.',
+            help='Namespaces to discover function-pythonic ConfigMaps and Secrets in, default is cluster wide.',
+        )
+        parser.add_argument(
+            '--packages-environmentconfigs',
+            action='store_true',
+            help='Also Discover python packages from function-pythonic EnvironmentConfigs.'
+        )
+        parser.add_argument(
+            '--packages-compositions',
+            action='store_true',
+            help='Also Discover python packages from function-pythonic Compositions.'
         )
         parser.add_argument(
             '--packages-dir',
@@ -75,7 +91,9 @@ class Command(command.Command):
         if not self.args.tls_certs_dir and not self.args.insecure:
             print('Either --tls-certs-dir or --insecure must be specified', file=sys.stderr)
             sys.exit(1)
-
+        if (self.args.packages_environmentconfigs or self.args.packages_compositions) and self.args.packages_namespace:
+            print('--packages-namespace cannot be used with --packages-environment-configs or --packages-compositions', file=sys.stderr)
+            sys.exit(1)
         if self.args.pip_install:
             import pip._internal.cli.main
             pip._internal.cli.main.main(['install', '--user', *shlex.split(self.args.pip_install)])
@@ -108,15 +126,18 @@ class Command(command.Command):
             )
         await grpc_server.start()
 
-        if self.args.packages:
+        if self.args.packages_configmaps or self.args.packages_secrets or self.args.packages_environmentconfigs or self.args.packages_compositions:
             from . import packages
             async with asyncio.TaskGroup() as tasks:
                 tasks.create_task(grpc_server.wait_for_termination())
                 tasks.create_task(packages.operator(
                     grpc_server,
                     grpc_runner,
+                    self.args.packages_configmaps,
                     self.args.packages_secrets,
                     self.args.packages_namespace,
+                    self.args.packages_environmentconfigs,
+                    self.args.packages_compositions,
                     self.args.packages_dir,
                 ))
         else:

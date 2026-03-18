@@ -121,8 +121,13 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         except Exception as e:
             return self.fatal(request, logger, 'Compose', e)
 
-        if requireds := self.get_requireds(step, composite):
-            logger.debug(f"Requireds requested: {','.join(requireds)}")
+        schemas = self.get_schemas(step, composite)
+        requireds = self.get_requireds(step, composite)
+        if schemas or requireds:
+            if schemas:
+                logger.debug(f"Required schemas: {','.join(schemas)}")
+            if requireds:
+                logger.debug(f"Required resources: {','.join(requireds)}")
         else:
             self.process_usages(composite)
             self.process_unknowns(composite)
@@ -155,11 +160,21 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
             ]
         )
 
+    def get_schemas(self, step, composite):
+        schemas = []
+        for name, schema in composite.schemas:
+            if len(schema.kind) and len(schema.apiVersion):
+                s = pythonic.Map(kind=schema.kind, apiVersion=schema.apiVersion)
+                if s != step.schemas[name]:
+                    step.schemas[name] = s
+                    schemas.append(name)
+        return schemas
+
     def get_requireds(self, step, composite):
         requireds = []
         for name, required in composite.requireds:
-            if len(required.apiVersion) and len(required.kind):
-                r = pythonic.Map(apiVersion=required.apiVersion, kind=required.kind)
+            if len(required.kind) and len(required.apiVersion):
+                r = pythonic.Map(kind=required.kind, apiVersion=required.apiVersion)
                 if len(required.namespace):
                     r.namespace = required.namespace
                 if len(required.matchName):

@@ -46,6 +46,7 @@ spec:
                 type: string
           parameters:
             type: object
+            description: Parameters available to the Composite implementation
             x-kubernetes-preserve-unknown-fields: true
           composite:
             type: string
@@ -53,5 +54,9 @@ spec:
           inlined:
             type: string
             description: Inlined Composition, the python module is retrieved from the Composite's spec field specified
+          packages:
+            type: object
+            description: Packages added to the python path if enabled
+            x-kubernetes-preserve-unknown-fields: true
     served: true
     storage: true
