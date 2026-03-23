@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-packages = ["kopf==1.43.0"]
+packages = ["kopf==1.44.3"]
 pip-install = ["pip==26.0.1"]
 
 [project.urls]
