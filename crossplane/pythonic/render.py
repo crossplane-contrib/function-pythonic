@@ -12,7 +12,7 @@ from crossplane.function.proto.v1 import run_function_pb2 as fnv1
 
 from . import (
     command,
-    composite,
+    composite as composite_module,
     function,
     protobuf,
 )
@@ -212,7 +212,7 @@ class Command(command.Command):
         if not inspect.isclass(clazz):
             print(f"Composition class {self.args.composition} is not a class", file=sys.stderr)
             sys.exit(1)
-        if not issubclass(clazz, composite.BaseComposite):
+        if not issubclass(clazz, composite_module.BaseComposite):
             print(f"Composition class {self.args.composition} is not a subclass of BaseComposite", file=sys.stderr)
             sys.exit(1)
         return self.create_composition(composite, self.args.composition)
