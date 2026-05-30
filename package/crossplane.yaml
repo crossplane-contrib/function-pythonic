@@ -11,4 +11,7 @@ metadata:
       a set of python classes enabling an elegant and terse syntax. See the
       [README](https://github.com/crossplane-contrib/function-pythonic)
       for examples and documentation.
-spec: {}
+spec:
+  capabilities:
+  - composition
+  - operation

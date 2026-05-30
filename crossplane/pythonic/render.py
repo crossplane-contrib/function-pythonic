@@ -144,7 +144,11 @@ class Command(command.Command):
         # Print Composite connection if requested.
         if self.args.include_connection_xr:
             print('---')
-            print(str(render.connection), end='')
+            print(str(protobuf.Map(
+                apiVersion='render.crossplane.io/v1beta1',
+                kind='Connection',
+                values=render.connection,
+            )), end='')
         # Print the composed resources.
         for resource in sorted(render.resources, key=lambda resource: str(resource.metadata.annotations['crossplane.io/composition-resource-name'])):
             print('---')
@@ -152,12 +156,18 @@ class Command(command.Command):
         # Print the results (AKA events) if requested.
         if self.args.include_function_results:
             for result in render.results:
+                result.apiVersion = 'render.crossplane.io/v1beta1'
+                result.kind = 'Result'
                 print('---')
                 print(str(result), end='')
         # Print the final context if requested.
         if self.args.include_context:
             print('---')
-            print(str(render.context), end='')
+            print(str(protobuf.Map(
+                apiVersion='render.crossplane.io/v1beta1',
+                kind='Context',
+                values=render.context,
+            )), end='')
 
     async def setup_composite(self, api=None):
         # Obtain the Composite to render.
@@ -287,7 +297,7 @@ class Command(command.Command):
             context[key_value[0]] = protobuf.Yaml(key_value[1])
         return context
 
-    async def render(self, composite, observed=[], composition=None, resources=[], schemas=[], context=None, api=None, render_unknowns=False, crossplane_v1=False, composite_observeds=True):
+    async def render(self, composite, observeds=[], composition=None, resources=[], schemas=[], context=None, api=None, render_unknowns=False, crossplane_v1=False, composite_observeds=True):
         # Create the request used when running Composition steps.
         request = protobuf.Message(None, 'request', fnv1.RunFunctionRequest.DESCRIPTOR, fnv1.RunFunctionRequest())
         if context is not None:
@@ -296,9 +306,9 @@ class Command(command.Command):
         # Establish the request observed composite.
         await self.set_resource(composite, request.observed.composite, resources, api)
         # Establish the manually configured observed resources.
-        if observed:
+        if observeds:
             async with asyncio.TaskGroup() as group:
-                for resource in observed:
+                for resource in observeds:
                     name = resource.metadata.annotations['crossplane.io/composition-resource-name']
                     if name:
                         group.create_task(self.set_resource(resource, request.observed.resources[name], resources, api))
@@ -419,8 +429,6 @@ class Command(command.Command):
             # Collect the step's returned results.
             for result in response.results:
                 ix = len(results)
-                results[ix].apiVersion = 'render.crossplane.io/v1beta1'
-                results[ix].kind = 'Result'
                 results[ix].step = step.step
                 results[ix].severity = fnv1.Severity.Name(result.severity._value)
                 if result.reason:
@@ -493,18 +501,11 @@ class Command(command.Command):
 
         return protobuf.Map(
             composite=composite,
-            connection=protobuf.Map(
-                apiVersion='render.crossplane.io/v1beta1',
-                kind='Connection',
-                values={key: value for key, value in request.desired.composite.connection_details}
-            ),
+            connection=request.desired.composite.connection_details,
             resources=resources,
             results=results,
-            context=protobuf.Map(
-                apiVersion='render.crossplane.io/v1beta1',
-                kind='Context',
-                values=request.context,
-            ),
+            context=request.context,
+            observed=request.observed,
         )
 
     async def get_composite_ref(self, composite, ref, request, resources, api):

@@ -14,18 +14,84 @@ composite:
       status: 'True'
       type: ResourcesComposed
     replicas: 2
-connection:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Connection
-  values: {}
+connection: {}
 context:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Context
-  values:
-    _pythonic:
-      create-deployment-and-service:
-        iteration: 1
-    iteration: 1
+  _pythonic:
+    create-deployment-and-service:
+      iteration: 1
+  iteration: 1
+observed:
+  composite:
+    connection_details: {}
+    ready: 0
+    resource:
+      apiVersion: example.crossplane.io/v1
+      kind: App
+      metadata:
+        name: my-app
+        namespace: default
+      spec:
+        image: nginx
+  resources:
+    deployment:
+      connection_details: {}
+      ready: 0
+      resource:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          annotations:
+            crossplane.io/composition-resource-name: deployment
+          generateName: my-app-
+          labels:
+            crossplane.io/composite: my-app
+            example.crossplane.io/app: my-app
+          name: my-app-01234
+          namespace: default
+        spec:
+          replicas: 2
+          selector:
+            matchLabels:
+              example.crossplane.io/app: my-app
+          template:
+            metadata:
+              labels:
+                example.crossplane.io/app: my-app
+            spec:
+              containers:
+              - image: nginx
+                name: app
+                ports:
+                - containerPort: 80
+        status:
+          availableReplicas: 2
+          conditions:
+          - status: 'True'
+            type: Available
+          updatedReplicas: 2
+    service:
+      connection_details: {}
+      ready: 0
+      resource:
+        apiVersion: v1
+        kind: Service
+        metadata:
+          annotations:
+            crossplane.io/composition-resource-name: service
+          generateName: my-app-
+          labels:
+            crossplane.io/composite: my-app
+            example.crossplane.io/app: my-app
+          name: my-app-12345
+          namespace: default
+        spec:
+          clusterIP: 1.2.3.4
+          ports:
+          - port: 8080
+            protocol: TCP
+            targetPort: 80
+          selector:
+            example.crossplane.io/app: my-app
 resources:
 - apiVersion: apps/v1
   kind: Deployment

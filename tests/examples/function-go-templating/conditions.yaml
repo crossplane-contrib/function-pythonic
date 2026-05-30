@@ -27,17 +27,22 @@ composite:
       reason: AllComposed
       status: 'True'
       type: ResourcesComposed
-connection:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Connection
-  values: {}
+connection: {}
 context:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Context
-  values:
-    _pythonic:
-      conditions:
-        iteration: 1
-    iteration: 1
+  _pythonic:
+    conditions:
+      iteration: 1
+  iteration: 1
+observed:
+  composite:
+    connection_details: {}
+    ready: 0
+    resource:
+      apiVersion: example.crossplane.io/v1
+      kind: XR
+      metadata:
+        name: example-xr
+      spec: {}
+  resources: {}
 resources: []
 results: []

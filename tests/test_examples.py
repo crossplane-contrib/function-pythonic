@@ -28,11 +28,11 @@ expecteds = pathlib.Path(__file__).parent / 'examples'
 async def test(id, xr):
     composite = protobuf.Yaml(xr.read_text())
     directory = xr.parent
-    observed = directory / 'observed.yaml'
-    if observed.is_file():
-        observed = protobuf.YamlAll(observed.read_text())
+    observeds = directory / 'observed.yaml'
+    if observeds.is_file():
+        observeds = protobuf.YamlAll(observeds.read_text())
     else:
-        observed = []
+        observeds = []
     composition = directory / 'composition.yaml'
     if composition.is_file():
         composition = protobuf.Yaml(composition.read_text())
@@ -55,7 +55,7 @@ async def test(id, xr):
             for line in python_path.read_text().split():
                 if line and line[0] != '#':
                     sys.path.append(str((directory / line).absolute()))
-        response = await render.Command().render(composite, observed, composition, resources, render_unknowns=True)
+        response = await render.Command().render(composite, observeds, composition, resources, render_unknowns=True)
     finally:
         if len(sys.path) > len_sys_path:
             del sys.path[len_sys_path:]

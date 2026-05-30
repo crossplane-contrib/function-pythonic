@@ -13,23 +13,39 @@ composite:
       reason: AllComposed
       status: 'True'
       type: ResourcesComposed
-connection:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Connection
-  values: {}
+connection: {}
 context:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Context
-  values:
-    _pythonic:
-      render-templates:
-        iteration: 2
-        requireds:
-          VPC:
-            apiVersion: ec2.aws.crossplane.io/v1beta1
-            kind: VPC
-            matchName: usages-vpc
-    iteration: 2
+  _pythonic:
+    render-templates:
+      iteration: 2
+      requireds:
+        VPC:
+          apiVersion: ec2.aws.crossplane.io/v1beta1
+          kind: VPC
+          matchName: usages-vpc
+  iteration: 2
+observed:
+  composite:
+    connection_details: {}
+    ready: 0
+    resource:
+      apiVersion: example.crossplane.io/v1beta1
+      kind: XR
+      metadata:
+        name: example
+      spec:
+        environment: dev
+  resources:
+    SubnetA:
+      connection_details: {}
+      ready: 0
+      resource:
+        apiVersion: ec2.aws.crossplane.io/v1beta1
+        kind: Subnet
+        metadata:
+          annotations:
+            crossplane.io/composition-resource-name: SubnetA
+          name: usages-subnet
 resources:
 - apiVersion: ec2.aws.crossplane.io/v1beta1
   kind: Subnet

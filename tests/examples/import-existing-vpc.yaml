@@ -7,19 +7,37 @@ composite:
       reason: Available
       status: 'True'
       type: Ready
-connection:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Connection
-  values: {}
-context:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Context
-  values: {}
+connection: {}
+context: {}
+observed:
+  composite:
+    connection_details: {}
+    ready: 0
+    resource:
+      apiVersion: caleb.pythonic.com/v1alpha1
+      kind: Network
+      metadata:
+        name: test-network
+        namespace: crossplane-system
+      spec:
+        cidr: 10.0.0.0/16
+        region: us-east-1
+        tags:
+          crossplane-contrib:cloudops: owned
+  resources:
+    VPC:
+      connection_details: {}
+      ready: 0
+      resource:
+        apiVersion: ec2.aws.m.upbound.io/v1beta1
+        kind: VPC
+        metadata:
+          annotations:
+            crossplane.io/composition-resource-name: VPC
+            crossplane.io/external-name: vpc-0123456789
 resources: []
 results:
-- apiVersion: render.crossplane.io/v1beta1
-  kind: Result
-  message: 'Exec exception: No module named ''aiobotocore'''
+- message: 'Exec exception: No module named ''aiobotocore'''
   reason: ''
   severity: SEVERITY_FATAL
   step: render-templates

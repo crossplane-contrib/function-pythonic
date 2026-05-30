@@ -158,19 +158,23 @@ def package_delete(action, package_dir, package, logger):
 
 def validate_entry(name, value, logger):
     if isinstance(value, str):
-        if not name.endswith('.py'):
-            if '.' in name or '/' in name:
-                logger.error(f"Python package file name is not valid: {name}")
+        if name.endswith('.py'):
+            name = name[:-3]
+            if not name.isidentifier():
+                logger.error(f"Python module name is not an identifier: {name}")
                 return False
-            return True
-        name = name[:-3]
-    elif not isinstance(value, dict):
+        else:
+            if '/' in name:
+                logger.error(f"Python file name is not valid: {name}")
+                return False
+    elif isinstance(value, dict):
+        if not name.isidentifier():
+            logger.error(f"Python package name is not an identifier: {name}")
+            return False
+    else:
         logger.error(f"Python package \"{name}\" value is not a valid type: {value.__class__}")
         return False
-    if name.isidentifier():
-        return True
-    logger.error(f"Python package name is not an identifier: {name}")
-    return False
+    return True
 
 
 def package_file_name(package_name):

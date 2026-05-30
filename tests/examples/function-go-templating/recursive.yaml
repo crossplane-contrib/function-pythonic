@@ -13,18 +13,26 @@ composite:
       reason: AllComposed
       status: 'True'
       type: ResourcesComposed
-connection:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Connection
-  values: {}
+connection: {}
 context:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Context
-  values:
-    _pythonic:
-      render-templates:
-        iteration: 1
-    iteration: 1
+  _pythonic:
+    render-templates:
+      iteration: 1
+  iteration: 1
+observed:
+  composite:
+    connection_details: {}
+    ready: 0
+    resource:
+      apiVersion: example.crossplane.io/v1beta1
+      kind: XR
+      metadata:
+        name: example
+      spec:
+        compositionRef:
+          name: example-recursive-wrapper
+        count: 2
+  resources: {}
 resources:
 - apiVersion: example.crossplane.io/v1beta1
   kind: XR

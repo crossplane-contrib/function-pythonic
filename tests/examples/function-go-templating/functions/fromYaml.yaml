@@ -13,17 +13,26 @@ composite:
       status: 'True'
       type: ResourcesComposed
     dummy: value2
-connection:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Connection
-  values: {}
+connection: {}
 context:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Context
-  values:
-    _pythonic:
-      render-templates:
-        iteration: 1
-    iteration: 1
+  _pythonic:
+    render-templates:
+      iteration: 1
+  iteration: 1
+observed:
+  composite:
+    connection_details: {}
+    ready: 0
+    resource:
+      apiVersion: example.crossplane.io/v1beta1
+      kind: XR
+      metadata:
+        name: example
+      spec:
+        yamlBlob: |
+          key1: value1
+          key2: value2
+          key3: value3
+  resources: {}
 resources: []
 results: []

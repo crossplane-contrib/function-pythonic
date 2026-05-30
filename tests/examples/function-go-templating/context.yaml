@@ -13,42 +13,47 @@ composite:
       status: 'True'
       type: ResourcesComposed
     fromEnv: e
-connection:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Connection
-  values: {}
+connection: {}
 context:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Context
-  values:
-    _pythonic:
-      python-update-conditions:
-        iteration: 2
-        requireds:
-          example-config:
-            apiVersion: apiextensions.crossplane.io/v1beta1
-            kind: EnvironmentConfig
-            matchName: example-config
-    apiextensions.crossplane.io/environment:
-      array:
-      - '1'
-      - '2'
-      complex:
-        a: b
-        c:
-          d: e
-          f: '1'
-      nestedEnvUpdate:
-        hello: world
-      update: environment
-    iteration: 2
-    newKey:
+  _pythonic:
+    python-update-conditions:
+      iteration: 2
+      requireds:
+        example-config:
+          apiVersion: apiextensions.crossplane.io/v1beta1
+          kind: EnvironmentConfig
+          matchName: example-config
+  apiextensions.crossplane.io/environment:
+    array:
+    - '1'
+    - '2'
+    complex:
+      a: b
+      c:
+        d: e
+        f: '1'
+    nestedEnvUpdate:
       hello: world
-    other-context-key:
-      complex:
-        a: b
-        c:
-          d: e
-          f: '1'
+    update: environment
+  iteration: 2
+  newKey:
+    hello: world
+  other-context-key:
+    complex:
+      a: b
+      c:
+        d: e
+        f: '1'
+observed:
+  composite:
+    connection_details: {}
+    ready: 0
+    resource:
+      apiVersion: example.crossplane.io/v1
+      kind: XR
+      metadata:
+        name: example-xr
+      spec: {}
+  resources: {}
 resources: []
 results: []

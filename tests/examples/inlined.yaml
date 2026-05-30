@@ -13,17 +13,27 @@ composite:
       reason: AllComposed
       status: 'True'
       type: ResourcesComposed
-connection:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Connection
-  values: {}
+connection: {}
 context:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Context
-  values:
-    _pythonic:
-      inlined:
-        iteration: 1
-    iteration: 1
+  _pythonic:
+    inlined:
+      iteration: 1
+  iteration: 1
+observed:
+  composite:
+    connection_details: {}
+    ready: 0
+    resource:
+      apiVersion: inlined.example.org/v1alpha1
+      kind: Step
+      metadata:
+        name: inlined-example
+      spec:
+        composite: |
+          class Composite(BaseComposite):
+            def compose(self):
+              self.logger.info('Debug World!')
+              self.status.composite = 'Hello, World!'
+  resources: {}
 resources: []
 results: []

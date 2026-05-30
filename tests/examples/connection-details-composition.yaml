@@ -14,21 +14,91 @@ composite:
       status: 'True'
       type: ResourcesComposed
 connection:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Connection
-  values:
-    password-0: accesskey-0-password
-    password-1: accesskey-1-password
-    user-0: accesskey-0-username
-    user-1: accesskey-1-username
+  password-0: accesskey-0-password
+  password-1: accesskey-1-password
+  user-0: accesskey-0-username
+  user-1: accesskey-1-username
 context:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Context
-  values:
-    _pythonic:
-      render-pythonic:
-        iteration: 1
-    iteration: 1
+  _pythonic:
+    render-pythonic:
+      iteration: 1
+  iteration: 1
+observed:
+  composite:
+    connection_details: {}
+    ready: 0
+    resource:
+      apiVersion: example.org/v1alpha1
+      kind: UserAccessKey
+      metadata:
+        name: my-keys
+        namespace: default
+      spec:
+        writeConnectionSecretToRef:
+          name: my-keys-connection-details
+  resources:
+    access-key-0:
+      connection_details:
+        password: accesskey-0-password
+        username: accesskey-0-username
+      ready: 0
+      resource:
+        apiVersion: iam.aws.m.upbound.io/v1beta1
+        kind: AccessKey
+        metadata:
+          annotations:
+            crossplane.io/composition-resource-name: access-key-0
+          labels:
+            crossplane.io/composite: my-keys
+          name: my-keys-12345
+          namespace: default
+        spec:
+          forProvider:
+            user: my-user
+          writeConnectionSecretToRef:
+            name: my-keys-accesskey-secret-0
+    access-key-1:
+      connection_details:
+        password: accesskey-1-password
+        username: accesskey-1-username
+      ready: 0
+      resource:
+        apiVersion: iam.aws.m.upbound.io/v1beta1
+        kind: AccessKey
+        metadata:
+          annotations:
+            crossplane.io/composition-resource-name: access-key-1
+          labels:
+            crossplane.io/composite: my-keys
+          name: my-keys-67890
+          namespace: default
+        spec:
+          forProvider:
+            user: my-user
+          writeConnectionSecretToRef:
+            name: my-keys-accesskey-secret-1
+    user:
+      connection_details: {}
+      ready: 0
+      resource:
+        apiVersion: iam.aws.m.upbound.io/v1beta1
+        kind: User
+        metadata:
+          annotations:
+            crossplane.io/composition-resource-name: user
+          labels:
+            crossplane.io/composite: my-keys
+          name: my-keys-12345
+          namespace: default
+        spec:
+          forProvider: {}
+        status:
+          atProvider:
+            id: my-user
+          conditions:
+          - reason: Created
+            status: 'True'
+            type: Ready
 resources:
 - apiVersion: iam.aws.m.upbound.io/v1beta1
   kind: AccessKey

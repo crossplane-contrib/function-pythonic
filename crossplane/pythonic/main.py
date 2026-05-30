@@ -5,6 +5,7 @@ import asyncio
 import sys
 
 from . import (
+    diff,
     grpc,
     render,
     version,
