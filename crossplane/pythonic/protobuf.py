@@ -1060,7 +1060,11 @@ class Value:
             values[key].struct_value.Clear()
             for k, v in value.items():
                 self[key][k] = v
-        elif isinstance(value, (list, tuple)):
+        elif isinstance(value, (Message, MapMessage)):
+            values[key].struct_value.Clear()
+            for k, v in value:
+                self[key][k] = v
+        elif isinstance(value, (list, tuple, RepeatedMessage)):
             values[key].list_value.Clear()
             for ix, v in enumerate(value):
                 self[key][ix] = v

@@ -14,23 +14,29 @@ composite:
       status: 'True'
       type: ResourcesComposed
     dummy: cool-status
-connection:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Connection
-  values: {}
+connection: {}
 context:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Context
-  values:
-    _pythonic:
-      render-templates:
-        iteration: 2
-        requireds:
-          bucket:
-            apiVersion: s3.aws.upbound.io/v1beta1
-            kind: Bucket
-            matchName: my-awesome-dev-bucket
-    iteration: 2
+  _pythonic:
+    render-templates:
+      iteration: 2
+      requireds:
+        bucket:
+          apiVersion: s3.aws.upbound.io/v1beta1
+          kind: Bucket
+          matchName: my-awesome-dev-bucket
+  iteration: 2
+observed:
+  composite:
+    connection_details: {}
+    ready: 0
+    resource:
+      apiVersion: example.crossplane.io/v1beta1
+      kind: XR
+      metadata:
+        name: example
+      spec:
+        environment: dev
+  resources: {}
 resources:
 - apiVersion: kubernetes.crossplane.io/v1alpha1
   kind: Object

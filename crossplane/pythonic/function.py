@@ -1,6 +1,5 @@
 """A Crossplane composition function."""
 
-import asyncio
 import importlib
 import inspect
 import logging
@@ -129,7 +128,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
 
         try:
             result = composite.compose()
-            if asyncio.iscoroutine(result):
+            if inspect.iscoroutine(result):
                 await result
         except Exception as e:
             return self.fatal(request, logger, 'Compose', e)

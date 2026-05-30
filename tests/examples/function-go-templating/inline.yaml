@@ -14,18 +14,24 @@ composite:
       status: 'True'
       type: ResourcesComposed
     dummy: cool-status
-connection:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Connection
-  values: {}
+connection: {}
 context:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Context
-  values:
-    _pythonic:
-      render-templates:
-        iteration: 1
-    iteration: 1
+  _pythonic:
+    render-templates:
+      iteration: 1
+  iteration: 1
+observed:
+  composite:
+    connection_details: {}
+    ready: 0
+    resource:
+      apiVersion: example.crossplane.io/v1beta1
+      kind: XR
+      metadata:
+        name: example
+      spec:
+        count: 2
+  resources: {}
 resources:
 - apiVersion: iam.aws.upbound.io/v1beta1
   kind: AccessKey

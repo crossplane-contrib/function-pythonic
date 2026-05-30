@@ -13,18 +13,47 @@ composite:
       reason: AllComposed
       status: 'True'
       type: ResourcesComposed
-connection:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Connection
-  values: {}
+connection: {}
 context:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Context
-  values:
-    _pythonic:
-      render-templates:
-        iteration: 1
-    iteration: 1
+  _pythonic:
+    render-templates:
+      iteration: 1
+  iteration: 1
+observed:
+  composite:
+    connection_details: {}
+    ready: 0
+    resource:
+      apiVersion: example.crossplane.io/v1beta1
+      kind: XR
+      metadata:
+        name: example
+      spec: {}
+  resources:
+    flexServer:
+      connection_details: {}
+      ready: 0
+      resource:
+        apiVersion: dbforpostgresql.azure.upbound.io/v1beta1
+        kind: FlexibleServer
+        metadata:
+          annotations:
+            crossplane.io/composition-resource-name: flexServer
+          labels:
+            crossplane.io/composite: example
+        spec:
+          forProvider:
+            storageMb: 32768
+          providerConfigRef:
+            name: my-provider-cfg
+        status:
+          atProvider:
+            id: abcdef
+          conditions:
+          - lastTransitionTime: '2023-11-03T09:07:31Z'
+            reason: foo
+            status: 'True'
+            type: Ready
 resources:
 - apiVersion: dbforpostgresql.azure.upbound.io/v1beta1
   kind: FlexibleServer

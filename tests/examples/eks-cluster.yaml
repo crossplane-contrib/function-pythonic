@@ -13,18 +13,31 @@ composite:
       reason: DesiredUnknowns
       status: 'False'
       type: ResourcesComposed
-connection:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Connection
-  values: {}
+connection: {}
 context:
-  apiVersion: render.crossplane.io/v1beta1
-  kind: Context
-  values:
-    _pythonic:
-      render-templates:
-        iteration: 1
-    iteration: 1
+  _pythonic:
+    render-templates:
+      iteration: 1
+  iteration: 1
+observed:
+  composite:
+    connection_details: {}
+    ready: 0
+    resource:
+      apiVersion: pythonic.crossplane.io/v1alpha1
+      kind: EksCluster
+      metadata:
+        name: pythonic
+      spec:
+        cluster:
+          name: pythonic
+          region: us-east-1
+          version: '1.32'
+        tags:
+          crossplane-contrib:cloudops: owned
+          environment: stage
+          project: development
+  resources: {}
 resources:
 - apiVersion: ec2.aws.crossplane.io/v1beta1
   kind: Address
@@ -1207,9 +1220,7 @@ resources:
       - key: project
         value: development
 results:
-- apiVersion: render.crossplane.io/v1beta1
-  kind: Result
-  message: 'Desired resources with unknowns: Cluster,Cluster_Role_<<UNKNOWN>>,Cluster_Subnet_<<UNKNOWN>>,InternetGateway,InternetGateway_VPC_<<UNKNOWN>>,NATGateway,NATGateway_Address_<<UNKNOWN>>,NATGateway_Subnet_<<UNKNOWN>>,RoutePrivate,RoutePrivate_NATGateway_<<UNKNOWN>>,RoutePrivate_RouteTable_<<UNKNOWN>>,RoutePublic,RoutePublic_InternetGateway_<<UNKNOWN>>,RoutePublic_RouteTable_<<UNKNOWN>>,RouteTablePrivate,RouteTablePrivate_Subnet_<<UNKNOWN>>,RouteTablePrivate_VPC_<<UNKNOWN>>,RouteTablePublic,RouteTablePublic_Subnet_<<UNKNOWN>>,RouteTablePublic_VPC_<<UNKNOWN>>,RpaClusterPolicy,RpaClusterPolicy_Role_<<UNKNOWN>>,RpaVPCResourceController,RpaVPCResourceController_Role_<<UNKNOWN>>,SubnetPrivateA,SubnetPrivateA_VPC_<<UNKNOWN>>,SubnetPrivateB,SubnetPrivateB_VPC_<<UNKNOWN>>,SubnetPrivateC,SubnetPrivateC_VPC_<<UNKNOWN>>,SubnetPublicA,SubnetPublicA_VPC_<<UNKNOWN>>,SubnetPublicB,SubnetPublicB_VPC_<<UNKNOWN>>,SubnetPublicC,SubnetPublicC_VPC_<<UNKNOWN>>'
+- message: 'Desired resources with unknowns: Cluster,Cluster_Role_<<UNKNOWN>>,Cluster_Subnet_<<UNKNOWN>>,InternetGateway,InternetGateway_VPC_<<UNKNOWN>>,NATGateway,NATGateway_Address_<<UNKNOWN>>,NATGateway_Subnet_<<UNKNOWN>>,RoutePrivate,RoutePrivate_NATGateway_<<UNKNOWN>>,RoutePrivate_RouteTable_<<UNKNOWN>>,RoutePublic,RoutePublic_InternetGateway_<<UNKNOWN>>,RoutePublic_RouteTable_<<UNKNOWN>>,RouteTablePrivate,RouteTablePrivate_Subnet_<<UNKNOWN>>,RouteTablePrivate_VPC_<<UNKNOWN>>,RouteTablePublic,RouteTablePublic_Subnet_<<UNKNOWN>>,RouteTablePublic_VPC_<<UNKNOWN>>,RpaClusterPolicy,RpaClusterPolicy_Role_<<UNKNOWN>>,RpaVPCResourceController,RpaVPCResourceController_Role_<<UNKNOWN>>,SubnetPrivateA,SubnetPrivateA_VPC_<<UNKNOWN>>,SubnetPrivateB,SubnetPrivateB_VPC_<<UNKNOWN>>,SubnetPrivateC,SubnetPrivateC_VPC_<<UNKNOWN>>,SubnetPublicA,SubnetPublicA_VPC_<<UNKNOWN>>,SubnetPublicB,SubnetPublicB_VPC_<<UNKNOWN>>,SubnetPublicC,SubnetPublicC_VPC_<<UNKNOWN>>'
   reason: DesiredUnknowns
   severity: SEVERITY_NORMAL
   step: render-templates
