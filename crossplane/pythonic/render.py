@@ -9,7 +9,6 @@ import logging
 import pathlib
 import sys
 import yaml
-from crossplane.function.proto.v1 import run_function_pb2 as fnv1
 
 from . import (
     command,
@@ -17,6 +16,8 @@ from . import (
     protobuf,
 )
 from .composite import BaseComposite
+from .proto.v1 import run_function_pb2 as fnv1
+
 
 INFLECT = inflect.engine()
 INFLECT.classical(all=False)

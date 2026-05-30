@@ -1,10 +1,12 @@
 
 import datetime
 from google.protobuf.duration_pb2 import Duration
-from crossplane.function.proto.v1 import run_function_pb2 as fnv1
 
-from . import auto_ready
-from . import protobuf
+from . import (
+    auto_ready,
+    protobuf,
+)
+from .proto.v1 import run_function_pb2 as fnv1
 
 
 _notset = object()

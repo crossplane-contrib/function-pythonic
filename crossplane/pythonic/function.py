@@ -7,8 +7,8 @@ import logging
 import sys
 
 import grpc
-from crossplane.function.proto.v1 import run_function_pb2 as fnv1
-from crossplane.function.proto.v1 import run_function_pb2_grpc as grpcv1
+from .proto.v1 import run_function_pb2 as fnv1
+from .proto.v1 import run_function_pb2_grpc as grpcv1
 from .. import pythonic
 
 logger = logging.getLogger(__name__)
