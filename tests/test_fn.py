@@ -1,7 +1,7 @@
 
 import pathlib
 import pytest
-from crossplane.function.proto.v1 import run_function_pb2 as fnv1
+from crossplane.pythonic.proto.v1 import run_function_pb2 as fnv1
 
 from crossplane.pythonic import function
 from tests import utils

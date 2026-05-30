@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "crossplane-function-pythonic"
 description = 'A Python centric Crossplane Function'
@@ -17,9 +21,10 @@ classifiers = [
 dynamic = ["version"]
 
 dependencies = [
-  "crossplane-function-sdk-python==0.12.0",
+  "grpcio==1.80.0",
   "inflect==7.5.0",
   "kr8s==0.20.15",
+  "protobuf==7.35.0",
   "pyyaml==6.0.3",
 ]
 
@@ -35,19 +40,26 @@ Source = "https://github.com/crossplane-contrib/function-pythonic"
 [project.scripts]
 function-pythonic = "crossplane.pythonic.main:main"
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
 [tool.hatch.version]
 path = "crossplane/pythonic/__about__.py"
 validate-bump = false
 
+[tool.hatch.envs.generate]
+type = "virtual"
+path = ".venv-generate"
+post-install-commands = [
+  "pip install --no-deps grpcio-tools==1.80.0",
+]
+[tool.hatch.envs.generate.scripts]
+protoc = "python -m grpc_tools.protoc --proto_path=. --python_out=. --pyi_out=. --grpc_python_out=. crossplane/pythonic/proto/v1/run_function.proto"
+
 [tool.hatch.build.targets.wheel]
-only-include = ["crossplane"]
+ignore-vcs = true
+packages = ["crossplane"]
 
 [tool.hatch.build.targets.sdist]
-only-include = [
+ignore-vcs = true
+packages = [
   "crossplane",
   "examples",
 ]
@@ -77,10 +89,12 @@ check = "ruff check crossplane tests && ruff format --diff crossplane tests"
 type = "virtual"
 path = ".venv-test"
 dependencies = [
-  "grpcio-tools==1.76.0",
   "pytest==9.0.2",
   "pytest-asyncio==1.3.0",
   "pytest-cov==7.1.0",
+]
+post-install-commands = [
+  "pip install --no-deps grpcio-tools==1.80.0",
 ]
 packages = ["crossplane"]
 [tool.hatch.envs.test.scripts]

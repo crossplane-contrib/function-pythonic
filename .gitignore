@@ -212,6 +212,7 @@ __marimo__/
 
 # function-pythonic
 crossplane/pythonic/__version__.py
+crossplane/pythonic/proto/v1/run_function_pb2*
 pocs/
 pythonic-packages/
 tests/protobuf/pytest_pb2*

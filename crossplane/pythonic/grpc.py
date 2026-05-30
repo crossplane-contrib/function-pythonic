@@ -7,7 +7,6 @@ import shlex
 import signal
 import sys
 
-import crossplane.function.proto.v1.run_function_pb2_grpc as grpcv1
 import grpc
 
 from . import (
@@ -15,6 +14,8 @@ from . import (
     command,
     function,
 )
+from .proto.v1 import run_function_pb2_grpc as grpcv1
+
 
 logger = logging.getLogger(__name__)
 

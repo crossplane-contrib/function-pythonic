@@ -70,6 +70,9 @@ jobs:
     - name: Install Hatch
       uses: pypa/hatch@install
 
+    - name: Generate run_function protobuf
+      run: hatch run generate:protoc
+
     - name: Run Unit Tests
       run: hatch run test:ci
 
@@ -113,6 +116,9 @@ jobs:
 
     - name: Set PyPI Project Version
       run: hatch version ${{ env.PYPI_VERSION }}
+
+    - name: Generate run_function protobuf
+      run: hatch run generate:protoc
 
     - name: Build Sdist and Wheel
       run: hatch build
