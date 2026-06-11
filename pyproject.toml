@@ -24,7 +24,7 @@ dependencies = [
   "grpcio==1.80.0",
   "inflect==7.5.0",
   "kr8s==0.20.15",
-  "protobuf==7.35.0",
+  "protobuf==7.35.1",
   "pyyaml==6.0.3",
 ]
 
