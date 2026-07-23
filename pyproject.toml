@@ -21,7 +21,7 @@ classifiers = [
 dynamic = ["version"]
 
 dependencies = [
-  "grpcio==1.80.0",
+  "grpcio==1.83.0",
   "inflect==7.5.0",
   "kr8s==0.20.15",
   "protobuf==7.35.0",
