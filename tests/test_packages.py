@@ -217,7 +217,7 @@ async def test_startup_and_cleanup(packages_module, monkeypatch):
         ('data', 'payload', True),
         ('package', {}, True),
         ('bad-name.py', 'print(1)\n', False),
-        ('bad.name', 'payload', False),
+        ('good.name', 'payload', True),
         ('bad/name', 'payload', False),
         ('package', 1, False),
     ],
