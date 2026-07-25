@@ -43,19 +43,26 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
 
     async def run_function(self, request):
         composite = request.observed.composite.resource
-        name = list(reversed(composite['apiVersion'].split('/')[0].split('.')))
-        name.append(composite['kind'])
-        name.append(composite['metadata']['name'])
-        logger = logging.getLogger('.'.join(name))
-
-        if 'inlined' in request.input and request.input['inlined']:
-            if 'spec' not in composite or request.input['inlined'] not in composite['spec']:
-                return self.fatal(request, logger, f"Missing inlined spec.{request.input['inlined']}")
-            composite = composite['spec'][request.input['inlined']]
+        if composite and composite.fields:
+            name = list(reversed(composite['apiVersion'].split('/')[0].split('.')))
+            name.append(composite['kind'])
+            name.append(composite['metadata']['name'])
+            logger = logging.getLogger('.'.join(name))
+            if 'inlined' in request.input and request.input['inlined']:
+                if 'spec' not in composite or request.input['inlined'] not in composite['spec']:
+                    return self.fatal(request, logger, f"Missing inlined spec.{request.input['inlined']}")
+                composite = composite['spec'][request.input['inlined']]
+            else:
+                if 'composite' not in request.input:
+                    return self.fatal(request, logger, 'Missing composition input "composite"')
+                composite = request.input['composite']
+            operation = False
         else:
+            logger = logging.getLogger('operation')
             if 'composite' not in request.input:
-                return self.fatal(request, logger, 'Missing input "composite"')
+                return self.fatal(request, logger, 'Missing operation input "composite"')
             composite = request.input['composite']
+            operation = True
 
         # Ideally this is something the Function API provides
         if 'step' in request.input:
@@ -96,6 +103,12 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                 if not issubclass(clazz, pythonic.BaseComposite):
                     return self.fatal(request, logger, f"{composite} is not a subclass of BaseComposite")
             self.clazzes[composite] = clazz
+
+        if operation:
+            if '\n' in composite:
+                logger = logging.getLogger(f"operation.{clazz.__name__}")
+            else:
+                logger = logging.getLogger(f"operation.{composite}")
 
         try:
             composite = clazz(self.crossplane_v1, request, logger)

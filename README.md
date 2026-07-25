@@ -288,6 +288,7 @@ The BaseComposite also provides access to the following Crossplane Function leve
 | self.context | Map | The response context, initialized from the request context |
 | self.environment | Map | The response environment, initialized from the request context environment |
 | self.requireds | Requireds | Request and read additional local Kubernetes resources |
+| self.watched | RequiredResource | THe WatchOperation's changed resource |
 | self.schemas | Schemas | Request and read CustomResourceDefinition schemas |
 | self.resources | Resources | Define and process composed resources |
 | self.usages| Boolean | Generate Crossplane Usages for resource dependencies, default False |

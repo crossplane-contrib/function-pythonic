@@ -9,5 +9,5 @@ response:
   desired: null
   conditions: null
   results:
-  - message: Missing input "composite"
+  - message: Missing composition input "composite"
     severity: 1

@@ -112,6 +112,7 @@ class BaseComposite:
         self.context = self.response.context
         self.environment = self.context['apiextensions.crossplane.io/environment']
         self.requireds = Requireds(self)
+        self.watched = self.requireds['ops.crossplane.io/watched-resource'][0]
         self.schemas = Schemas(self)
         self.resources = Resources(self)
         self.autoReady = True
