@@ -30,7 +30,7 @@ dependencies = [
 
 [project.optional-dependencies]
 packages = ["kopf==1.44.6"]
-pip-install = ["pip==26.1.2"]
+pip-install = ["pip==26.2.1"]
 
 [project.urls]
 Documentation = "https://github.com/crossplane-contrib/function-pythonic#readme"
