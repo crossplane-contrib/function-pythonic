@@ -287,7 +287,7 @@ class Command(command.Command):
             context[key_value[0]] = protobuf.Yaml(key_value[1])
         return context
 
-    async def render(self, composite, observed=[], composition=None, resources=[], schemas=[], context=None, api=None, render_unknowns=False, crossplane_v1=False, composite_observeds=True):
+    async def render(self, composite, observed=[], composition=None, resources=[], schemas=[], context=None, api=None, render_unknowns=False, crossplane_v1=False, composite_observeds=False):
         # Create the request used when running Composition steps.
         request = protobuf.Message(None, 'request', fnv1.RunFunctionRequest.DESCRIPTOR, fnv1.RunFunctionRequest())
         if context is not None:
@@ -491,7 +491,7 @@ class Command(command.Command):
         for condition in conditions:
             composite.status.conditions[protobuf.append] = condition
 
-        return protobuf.Map(
+        response = protobuf.Map(
             composite=composite,
             connection=protobuf.Map(
                 apiVersion='render.crossplane.io/v1beta1',
@@ -506,6 +506,10 @@ class Command(command.Command):
                 values=request.context,
             ),
         )
+        if composite_observeds:
+            for name, resource in request.observed.resources:
+                response.observed[name] = resource.resource
+        return response
 
     async def get_composite_ref(self, composite, ref, request, resources, api):
         namespace = ref.namespace
