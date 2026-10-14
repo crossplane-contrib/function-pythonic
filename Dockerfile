@@ -1,4 +1,4 @@
-FROM python:3.14-slim-trixie AS image
+FROM python:3.15-slim-trixie AS image
 
 COPY dist/*.whl /root
 WORKDIR /
