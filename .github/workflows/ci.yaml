@@ -14,7 +14,6 @@ on:
 
 env:
   # Common versions
-  PYTHON_VERSION: '3.14.7'
   DOCKER_BUILDX_VERSION: 'v0.26.1'
 
   # These environment variables are important to the Crossplane CLI install.sh
@@ -43,86 +42,40 @@ jobs:
   #   runs-on: ubuntu-24.04
   #   steps:
   #     - name: Checkout
-  #       uses: actions/checkout@v4
-
-  #     - name: Setup Python
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: ${{ env.PYTHON_VERSION }}
-
-  #     - name: Install Hatch
-  #       uses: pypa/hatch@install
-
+  #       uses: actions/checkout@v7
+  #.    - name: Install uv
+  #       uses: astral-sh/setup-uv@v910.3.0
   #     - name: Lint
-  #       run: hatch run lint:check
+  #       run: uv run poe lint-check
 
   test:
     runs-on: ubuntu-26.04
     steps:
     - name: Checkout
       uses: actions/checkout@v7
-
-    - name: Setup Python
-      uses: actions/setup-python@v7
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-
-    - name: Install Hatch
-      uses: pypa/hatch@install
-
+    - name: Install uv
+      uses: astral-sh/setup-uv@v10.3.0
     - name: Generate run_function protobuf
-      run: hatch run generate:protoc
-
+      run: uv run poe generate-protoc
     - name: Run Unit Tests
-      run: hatch run test:ci
-
-    #- name: Pytest coverage comment
-    #  uses: MishaKav/pytest-coverage-comment@v1.1.54
-    #  with:
-    #    badge-title: Coverage
-    #    title: Coverage Report
-    #    pytest-xml-coverage-path: reports/pytest-coverage.xml
-    #    junitxml-title: Unit Tests
-    #    junitxml-path: reports/pytest-junit.xml
-        #hide-badge: false
-        #hide-report: false
-        #create-new-comment: false
-        #hide-comment: false
-        #report-only-changed-files: false
-        #remove-link-from-badge: false
-        #unique-id-for-comment: python3.8
+      run: uv run poe test-ci
 
   build-pypi:
     runs-on: ubuntu-26.04
     steps:
     - name: Checkout
       uses: actions/checkout@v7
-
-    - name: Setup Python
-      uses: actions/setup-python@v7
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-
-    - name: Install Hatch
-      uses: pypa/hatch@install
-
-    # If a version wasn't explicitly passed as a workflow_dispatch input we
-    # default to version v0.0.0+<git-commit-date>-<git-short-sha>, for example
-    # v0.0.0+20231101115142-1091066df799. This is a simple implementation of
-    # Go's pseudo-versions: https://go.dev/ref/mod#pseudo-versions.
+    - name: Install uv
+      uses: astral-sh/setup-uv@v10.3.0
+    - name: Generate run_function protobuf
+      run: uv run poe generate-protoc
     - name: Set Default PyPI Project Version
       if: env.PYPI_VERSION == ''
       run: echo "PYPI_VERSION=v0.0.0+$(date -d@$(git show -s --format=%ct) +%Y%m%d%H%M%S)-$(git rev-parse --short=12 HEAD)" >> $GITHUB_ENV
-
     - name: Set PyPI Project Version
-      run: hatch version ${{ env.PYPI_VERSION }}
-
-    - name: Generate run_function protobuf
-      run: hatch run generate:protoc
-
+      run: sed -E "s|^(version += +).*|\1\"${PYPI_VERSION:1}\"|" -i pyproject.toml
     - name: Build Sdist and Wheel
-      run: hatch build
-
+      run: uv build
     - name: Upload Sdist and Wheel to GitHub
       uses: actions/upload-artifact@v7
       with:
@@ -178,8 +131,6 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
         target: image
-        build-args:
-          PYTHON_VERSION=${{ env.PYTHON_VERSION }}
         outputs: type=docker,dest=runtime-${{ matrix.arch }}.tar
 
     - name: Setup the Crossplane CLI
@@ -209,14 +160,13 @@ jobs:
         name: dist
         path: dist
 
-    - name: Install Hatch
-      uses: pypa/hatch@install
+    - name: Install uv
+      uses: astral-sh/setup-uv@v10.3.0
 
     - name: Publish to PyPI
       env:
-        HATCH_INDEX_USER: __token__
-        HATCH_INDEX_AUTH: ${{ secrets.PYPI_API_TOKEN }}
-      run: hatch publish --no-prompt
+        UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+      run: uv publish
 
   # This job downloads the single-platform packages built by the build job, and
   # pushes them as a multi-platform package. We only push the package it the
@@ -245,10 +195,6 @@ jobs:
     - name: Setup the Crossplane CLI
       run: "mkdir bin && cd bin && curl -sL https://raw.githubusercontent.com/crossplane/crossplane/master/install.sh | sh"
 
-    # If a version wasn't explicitly passed as a workflow_dispatch input we
-    # default to version v0.0.0-<git-commit-date>-<git-short-sha>, for example
-    # v0.0.0-20231101115142-1091066df799. This is a simple implementation of
-    # Go's pseudo-versions: https://go.dev/ref/mod#pseudo-versions.
     - name: Set Default Multi-Platform Package Version
       if: env.XPKG_VERSION == ''
       run: echo "XPKG_VERSION=v0.0.0-$(date -d@$(git show -s --format=%ct) +%Y%m%d%H%M%S)-$(git rev-parse --short=12 HEAD)" >> $GITHUB_ENV
