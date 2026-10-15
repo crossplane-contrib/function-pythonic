@@ -66,16 +66,14 @@ Subclass this class and implement:
 
 ```python
 class MyComposite(BaseComposite):
-    def compose(self):
-        ...
+    def compose(self): ...
 ```
 
 or async:
 
 ```python
 class MyComposite(BaseComposite):
-    async def compose(self):
-        ...
+    async def compose(self): ...
 ```
 
 Initialization behavior:
@@ -288,6 +286,7 @@ Behavior:
 
 ```python
 from crossplane.pythonic import BaseComposite
+
 
 class ExampleComposite(BaseComposite):
     def compose(self):

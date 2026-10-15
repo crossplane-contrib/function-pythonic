@@ -17,9 +17,10 @@
 
 import base64
 import datetime
-import google.protobuf.struct_pb2
 import json
 import sys
+
+import google.protobuf.struct_pb2
 import yaml
 
 _Unknown = object()
@@ -29,11 +30,14 @@ append = sys.maxsize
 def Map(**kwargs):
     return Value(None, None, kwargs)
 
+
 def List(*args):
     return Value(None, None, args)
 
+
 def Unknown():
     return Value(None, None)
+
 
 def Yaml(string, readOnly=None):
     if isinstance(string, (FieldMessage, Value)):
@@ -42,12 +46,16 @@ def Yaml(string, readOnly=None):
         string = str(string)
     return Value(None, None, yaml.safe_load(string), readOnly)
 
+
 def YamlAll(string, readOnly=None):
     if isinstance(string, (FieldMessage, Value)):
         if not string:
             return string
         string = str(string)
-    return Value(None, None, [document for document in yaml.safe_load_all(string)], readOnly)
+    return Value(
+        None, None, [document for document in yaml.safe_load_all(string)], readOnly
+    )
+
 
 def Json(string, readOnly=None):
     if isinstance(string, (FieldMessage, Value)):
@@ -56,29 +64,31 @@ def Json(string, readOnly=None):
         string = str(string)
     return Value(None, None, json.loads(string), readOnly)
 
+
 def B64Encode(string):
     if isinstance(string, (FieldMessage, Value)):
         if not string:
             return string
         string = str(string)
-    return base64.b64encode(string.encode('utf-8')).decode('utf-8')
+    return base64.b64encode(string.encode("utf-8")).decode("utf-8")
+
 
 def B64Decode(string):
     if isinstance(string, (FieldMessage, Value)):
         if not string:
             return string
         string = str(string)
-    return base64.b64decode(string.encode('utf-8')).decode('utf-8')
+    return base64.b64decode(string.encode("utf-8")).decode("utf-8")
 
 
 class Message:
     def __init__(self, parent, key, descriptor, message=_Unknown, readOnly=False):
-        self._set_attribute('_parent', parent)
-        self._set_attribute('_key', key)
-        self._set_attribute('_descriptor', descriptor)
-        self._set_attribute('_message', message)
-        self._set_attribute('_readOnly', readOnly)
-        self._set_attribute('_cache', {})
+        self._set_attribute("_parent", parent)
+        self._set_attribute("_key", key)
+        self._set_attribute("_descriptor", descriptor)
+        self._set_attribute("_message", message)
+        self._set_attribute("_readOnly", readOnly)
+        self._set_attribute("_cache", {})
 
     def _set_attribute(self, key, value):
         self.__dict__[key] = value
@@ -100,12 +110,21 @@ class Message:
         if value is _Unknown and field.has_default_value:
             value = field.default_value
         if field.is_repeated:
-            if field.type == field.TYPE_MESSAGE and field.message_type.GetOptions().map_entry:
-                value = MapMessage(self, key, field.message_type.fields_by_name['value'], value, self._readOnly)
+            if (
+                field.type == field.TYPE_MESSAGE
+                and field.message_type.GetOptions().map_entry
+            ):
+                value = MapMessage(
+                    self,
+                    key,
+                    field.message_type.fields_by_name["value"],
+                    value,
+                    self._readOnly,
+                )
             else:
                 value = RepeatedMessage(self, key, field, value, self._readOnly)
         elif field.type == field.TYPE_MESSAGE:
-            if field.message_type.name in ('Struct', 'ListValue'):
+            if field.message_type.name in ("Struct", "ListValue"):
                 value = Value(self, key, value, self._readOnly)
             else:
                 value = Message(self, key, field.message_type, value, self._readOnly)
@@ -129,7 +148,11 @@ class Message:
 
     def __hash__(self):
         if self._message is not _Unknown:
-            return hash(tuple(hash(item) for item in sorted(iter(self), key=lambda item: item[0])))
+            return hash(
+                tuple(
+                    hash(item) for item in sorted(iter(self), key=lambda item: item[0])
+                )
+            )
         return 0
 
     def __eq__(self, other):
@@ -153,7 +176,7 @@ class Message:
     def __str__(self):
         return format(self)
 
-    def __format__(self, spec='yaml'):
+    def __format__(self, spec="yaml"):
         return _formatObject(self, spec)
 
     def _fullName(self, key=None):
@@ -163,28 +186,28 @@ class Message:
             else:
                 name = str(self._key)
             if key is not None:
-                if '.' in key:
+                if "." in key:
                     name += f"[{key}]"
                 else:
                     name += f".{key}"
             return name
         if key is not None:
             return str(key)
-        return ''
+        return ""
 
     def _create_child(self, key):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
         key = self._validate_key(key)
         if self._message is _Unknown:
-            self.__dict__['_message'] = self._parent._create_child(self._key)
+            self.__dict__["_message"] = self._parent._create_child(self._key)
         return getattr(self._message, key)
 
     def __call__(self, **kwargs):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
         if self._message is _Unknown:
-            self.__dict__['_message'] = self._parent._create_child(self._key)
+            self.__dict__["_message"] = self._parent._create_child(self._key)
         self._message.Clear()
         self._cache.clear()
         for key, value in kwargs.items():
@@ -202,7 +225,7 @@ class Message:
             raise AttributeError(obj=self, name=key)
         field = self._descriptor.fields_by_name[key]
         if self._message is _Unknown:
-            self.__dict__['_message'] = self._parent._create_child(self._key)
+            self.__dict__["_message"] = self._parent._create_child(self._key)
         if isinstance(value, Message):
             value = value._message
         elif isinstance(value, (MapMessage, RepeatedMessage)):
@@ -212,7 +235,7 @@ class Message:
         elif isinstance(value, Value):
             value = value._raw
         if field.type == field.TYPE_BYTES and isinstance(value, str):
-            value = value.encode('utf-8')
+            value = value.encode("utf-8")
         setattr(self._message, key, value)
         self._cache.pop(key, None)
 
@@ -241,12 +264,12 @@ class Message:
 
 class MapMessage:
     def __init__(self, parent, key, field, messages=_Unknown, readOnly=False):
-        self._set_attribute('_parent', parent)
-        self._set_attribute('_key', key)
-        self._set_attribute('_field', field)
-        self._set_attribute('_messages', messages)
-        self._set_attribute('_readOnly', readOnly)
-        self._set_attribute('_cache', {})
+        self._set_attribute("_parent", parent)
+        self._set_attribute("_key", key)
+        self._set_attribute("_field", field)
+        self._set_attribute("_messages", messages)
+        self._set_attribute("_readOnly", readOnly)
+        self._set_attribute("_cache", {})
 
     def _set_attribute(self, key, value):
         self.__dict__[key] = value
@@ -265,10 +288,12 @@ class MapMessage:
         if value is None and self._field.has_default_value:
             value = self._field.default_value
         if self._field.type == self._field.TYPE_MESSAGE:
-            if self._field.message_type.name in ('Struct', 'ListValue'):
+            if self._field.message_type.name in ("Struct", "ListValue"):
                 value = Value(self, key, value, self._readOnly)
             else:
-                value = Message(self, key, self._field.message_type, value, self._readOnly)
+                value = Message(
+                    self, key, self._field.message_type, value, self._readOnly
+                )
         else:
             value = FieldMessage(self, key, self._field.type, value)
         self._cache[key] = value
@@ -290,7 +315,11 @@ class MapMessage:
 
     def __hash__(self):
         if self._nessages is not None:
-            return hash(tuple(hash(item) for item in sorted(iter(self), key=lambda item: item[0])))
+            return hash(
+                tuple(
+                    hash(item) for item in sorted(iter(self), key=lambda item: item[0])
+                )
+            )
         return 0
 
     def __eq__(self, other):
@@ -298,9 +327,12 @@ class MapMessage:
             return False
         if self._field.type != other._field.type:
             return False
-        if self._field.type == self._field.TYPE_MESSAGE:
-            if self._field.message_type.full_name != other._field.message_type.full_name:
-                return False
+        if (
+            self._field.type == self._field.TYPE_MESSAGE
+            and self._field.message_type.full_name
+            != other._field.message_type.full_name
+        ):
+            return False
         if self._messages is _Unknown:
             return other._messages is _Unknown
         elif other._messages is _Unknown:
@@ -317,7 +349,7 @@ class MapMessage:
     def __str__(self):
         return format(self)
 
-    def __format__(self, spec='yaml'):
+    def __format__(self, spec="yaml"):
         return _formatObject(self, spec)
 
     def _fullName(self, key=None):
@@ -327,28 +359,28 @@ class MapMessage:
             else:
                 name = str(self._key)
             if key is not None:
-                if '.' in key:
+                if "." in key:
                     name += f"[{key}]"
                 else:
                     name += f".{key}"
             return name
         if key is not None:
             return str(key)
-        return ''
+        return ""
 
     def _create_child(self, key):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
         key = self._validate_key(key)
         if self._messages is _Unknown:
-            self.__dict__['_messages'] = self._parent._create_child(self._key)
+            self.__dict__["_messages"] = self._parent._create_child(self._key)
         return self._messages[key]
 
     def __call__(self, **kwargs):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
         if self._messages is _Unknown:
-            self.__dict__['_messages'] = self._parent._create_child(self._key)
+            self.__dict__["_messages"] = self._parent._create_child(self._key)
         self._messages.clear()
         self._cache.clear()
         for key, value in kwargs.items():
@@ -376,7 +408,7 @@ class MapMessage:
             self._messages.pop(key, None)
         else:
             if self._field.type == self._field.TYPE_BYTES and isinstance(message, str):
-                message = message.encode('utf-8')
+                message = message.encode("utf-8")
             self._messages[key] = message
         self._cache.pop(key, None)
 
@@ -425,8 +457,7 @@ class RepeatedMessage:
                     key = 0
                 else:
                     key = len(self._messages) + key
-                    if key < 0:
-                        key = 0
+                    key = max(key, 0)
             if key in self._cache:
                 return self._cache[key]
             if self._messages is _Unknown or key >= len(self._messages):
@@ -436,10 +467,12 @@ class RepeatedMessage:
         if value is None and self._field.has_default_value:
             value = self._field.default_value
         if self._field.type == self._field.TYPE_MESSAGE:
-            if self._field.message_type.name in ('Struct', 'ListValue'):
+            if self._field.message_type.name in ("Struct", "ListValue"):
                 value = Value(self, key, value, self._readOnly)
             else:
-                value = Message(self, key, self._field.message_type, value, self._readOnly)
+                value = Message(
+                    self, key, self._field.message_type, value, self._readOnly
+                )
         else:
             value = FieldMessage(self, key, self._field.type, value)
         self._cache[key] = value
@@ -473,9 +506,12 @@ class RepeatedMessage:
             return False
         if self._field.type != other._field.type:
             return False
-        if self._field.type == self._field.TYPE_MESSAGE:
-            if self._field.message_type.full_name != other._field.message_type.full_name:
-                return False
+        if (
+            self._field.type == self._field.TYPE_MESSAGE
+            and self._field.message_type.full_name
+            != other._field.message_type.full_name
+        ):
+            return False
         if self._messages is _Unknown:
             return other._messages is _Unknown
         elif other._messages is _Unknown:
@@ -490,7 +526,7 @@ class RepeatedMessage:
     def __str__(self):
         return format(self)
 
-    def __format__(self, spec='yaml'):
+    def __format__(self, spec="yaml"):
         return _formatObject(self, spec)
 
     def _fullName(self, key=None):
@@ -504,14 +540,14 @@ class RepeatedMessage:
             return name
         if key is not None:
             return str(key)
-        return ''
+        return ""
 
     def _create_child(self, key):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
         key = self._validate_key(key)
         if self._messages is _Unknown:
-            self.__dict__['_messages'] = self._parent._create_child(self._key)
+            self.__dict__["_messages"] = self._parent._create_child(self._key)
         if key == append:
             key = len(self._messages)
         elif key < 0:
@@ -524,7 +560,7 @@ class RepeatedMessage:
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
         if self._messages is _Unknown:
-            self.__dict__['_messages'] = self._parent._create_child(self._key)
+            self.__dict__["_messages"] = self._parent._create_child(self._key)
         self._messages.clear()
         self._cache.clear()
         for arg in args:
@@ -553,7 +589,7 @@ class RepeatedMessage:
                 self._cache.clear()
         else:
             if self._field.type == self._field.TYPE_BYTES and isinstance(message, str):
-                message = message.encode('utf-8')
+                message = message.encode("utf-8")
             if key >= len(self._messages):
                 self._messages.append(message)
             else:
@@ -623,19 +659,19 @@ class FieldMessage:
 
     def __bytes__(self):
         if self._value is _Unknown:
-            return None
+            return None  # noqa: PLE0308
         if isinstance(self._value, str):
-            return self._value.encode('utf-8')
+            return self._value.encode("utf-8")
         return bytes(self._value)
 
     def __str__(self):
         if self._value is _Unknown:
-            return None
+            return None  # noqa: PLE0307
         if isinstance(self._value, bytes):
-            return self._value.decode('utf-8')
+            return self._value.decode("utf-8")
         return str(self._value)
 
-    def __format__(self, spec=''):
+    def __format__(self, spec=""):
         if self._value is _Unknown:
             return None
         return format(self._value, spec)
@@ -657,14 +693,14 @@ class FieldMessage:
             else:
                 name = str(self._key)
             if key is not None:
-                if '.' in key:
+                if "." in key:
                     name += f"[{key}]"
                 else:
                     name += f".{key}"
             return name
         if key is not None:
             return str(key)
-        return ''
+        return ""
 
 
 class ProtobufValue:
@@ -675,16 +711,26 @@ class ProtobufValue:
 
 class Value:
     def __init__(self, parent, key, value=_Unknown, readOnly=None):
-        self._set_attribute('_parent', parent)
-        self._set_attribute('_key', key)
-        self._set_attribute('_dependencies', {})
-        self._set_attribute('_unknowns', {})
-        self._set_attribute('_cache', {})
-        self._set_attribute('_readOnly', None)
-        if isinstance(value, (google.protobuf.struct_pb2.Value, google.protobuf.struct_pb2.Struct, google.protobuf.struct_pb2.ListValue)) or value is _Unknown:
-            self._set_attribute('_value', value)
+        self._set_attribute("_parent", parent)
+        self._set_attribute("_key", key)
+        self._set_attribute("_dependencies", {})
+        self._set_attribute("_unknowns", {})
+        self._set_attribute("_cache", {})
+        self._set_attribute("_readOnly", None)
+        if (
+            isinstance(
+                value,
+                (
+                    google.protobuf.struct_pb2.Value,
+                    google.protobuf.struct_pb2.Struct,
+                    google.protobuf.struct_pb2.ListValue,
+                ),
+            )
+            or value is _Unknown
+        ):
+            self._set_attribute("_value", value)
         else:
-            self._set_attribute('_value', google.protobuf.struct_pb2.Value())
+            self._set_attribute("_value", google.protobuf.struct_pb2.Value())
             if value is None:
                 self._value.null_value = 0
             elif isinstance(value, dict):
@@ -695,7 +741,7 @@ class Value:
                 self._value.list_value.Clear()
                 for ix, v in enumerate(value):
                     self[ix] = v
-            elif isinstance(value, bool): # Must be before number check
+            elif isinstance(value, bool):  # Must be before number check
                 self._value.bool_value = value
             elif isinstance(value, (int, float)):
                 self._value.number_value = value
@@ -703,7 +749,7 @@ class Value:
                 self._value.string_value = value
             else:
                 raise ValueError(f"Unexpected Value type: {value.__class__}")
-        self._set_attribute('_readOnly', readOnly)
+        self._set_attribute("_readOnly", readOnly)
 
     def _set_attribute(self, key, value):
         self.__dict__[key] = value
@@ -732,42 +778,40 @@ class Value:
                 return self._unknowns[key]
         if isinstance(key, str):
             match self._kind:
-                case 'struct_value':
+                case "struct_value":
                     value = self._value.struct_value.fields.get(key, _Unknown)
-                case 'Struct':
+                case "Struct":
                     value = self._value.fields.get(key, _Unknown)
-                case 'Unknown':
+                case "Unknown":
                     value = _Unknown
                 case _:
-                    raise ValueError(f"Invalid key \"{key}\" for kind: {self._kind}")
+                    raise ValueError(f'Invalid key "{key}" for kind: {self._kind}')
         elif isinstance(key, int):
             match self._kind:
-                case 'list_value':
+                case "list_value":
                     if key < 0:
                         key = len(self._value.list_value.values) + key
-                        if key < 0:
-                            key = 0
+                        key = max(key, 0)
                     if key < len(self._value.list_value.values):
                         value = self._value.list_value.values[key]
                     else:
                         if key == append:
                             key = len(self._value.list_value.values)
                         value = _Unknown
-                case 'ListValue':
+                case "ListValue":
                     if key < 0:
                         key = len(self._value.values) + key
-                        if key < 0:
-                            key = 0
+                        key = max(key, 0)
                     if key < len(self._value.values):
                         value = self._value.values[key]
                     else:
                         if key == append:
                             key = len(self._value.values)
                         value = _Unknown
-                case 'Unknown':
+                case "Unknown":
                     value = _Unknown
                 case _:
-                    raise ValueError(f"Invalid key \"{key}\" for kind: {self._kind}")
+                    raise ValueError(f'Invalid key "{key}" for kind: {self._kind}')
         else:
             raise NotImplementedError()
         value = Value(self, key, value, self._readOnly)
@@ -779,29 +823,29 @@ class Value:
 
     def __len__(self):
         match self._kind:
-            case 'struct_value':
+            case "struct_value":
                 return len(self._value.struct_value.fields) + len(self._unknowns)
-            case 'Struct':
+            case "Struct":
                 return len(self._value.fields) + len(self._unknowns)
-            case 'list_value':
+            case "list_value":
                 return len(self._value.list_value.values) + len(self._unknowns)
-            case 'ListValue':
+            case "ListValue":
                 return len(self._value.values) + len(self._unknowns)
-            case 'string_value':
+            case "string_value":
                 return len(self._value.string_value)
-            case 'bool_value':
+            case "bool_value":
                 return 1 if self._value.bool_value else 0
         return 0
 
     def __contains__(self, item):
         match self._kind:
-            case 'struct_value':
+            case "struct_value":
                 item = self._validate_key(item)
                 return item in self._value.struct_value.fields or item in self._unknowns
-            case 'Struct':
+            case "Struct":
                 item = self._validate_key(item)
                 return item in self._value.fields or item in self._unknowns
-            case 'list_value' | 'ListValue':
+            case "list_value" | "ListValue":
                 for value in self:
                     if item == value:
                         return True
@@ -809,19 +853,21 @@ class Value:
 
     def __iter__(self):
         match self._kind:
-            case 'struct_value':
-                for key in sorted(set(self._value.struct_value.fields) | set(self._unknowns.keys())):
+            case "struct_value":
+                for key in sorted(
+                    set(self._value.struct_value.fields) | set(self._unknowns.keys())
+                ):
                     yield key, self[key]
-            case 'Struct':
+            case "Struct":
                 for key in sorted(set(self._value.fields) | set(self._unknowns.keys())):
                     yield key, self[key]
-            case 'list_value':
+            case "list_value":
                 for ix in range(len(self._value.list_value.values)):
                     yield self[ix]
                 for ix in sorted(self._unknowns.keys()):
                     if ix >= len(self._value.list_value.values):
                         yield self[ix]
-            case 'ListValue':
+            case "ListValue":
                 for ix in range(len(self._value.values)):
                     yield self[ix]
                 for ix in sorted(self._unknowns.keys()):
@@ -830,17 +876,22 @@ class Value:
 
     def __hash__(self):
         match self._kind:
-            case 'struct_value' | 'Struct':
-                return hash(tuple(hash(item) for item in sorted(iter(self), key=lambda item: item[0])))
-            case 'list_value' | 'ListValue':
+            case "struct_value" | "Struct":
+                return hash(
+                    tuple(
+                        hash(item)
+                        for item in sorted(iter(self), key=lambda item: item[0])
+                    )
+                )
+            case "list_value" | "ListValue":
                 return hash(tuple(hash(item) for item in self))
-            case 'string_value':
+            case "string_value":
                 return hash(self._value.string_value)
-            case 'null_value':
+            case "null_value":
                 return hash(None)
-            case 'number_value':
+            case "number_value":
                 return hash(self._value.number_value)
-            case 'bool_value':
+            case "bool_value":
                 return hash(self._value.bool_value)
         return 0
 
@@ -849,7 +900,7 @@ class Value:
         if isinstance(other, Value) and other._kind != kind:
             return False
         match kind:
-            case 'struct_value' | 'Struct':
+            case "struct_value" | "Struct":
                 if not isinstance(other, (Value, dict)):
                     return False
                 if len(self) != len(other):
@@ -860,7 +911,7 @@ class Value:
                     if value != other[key]:
                         return False
                 return True
-            case 'list_value' | 'ListValue':
+            case "list_value" | "ListValue":
                 if not isinstance(other, (Value, tuple, list)):
                     return False
                 if len(self) != len(other):
@@ -869,27 +920,27 @@ class Value:
                     if value != other[ix]:
                         return False
                 return True
-            case 'Unknown':
+            case "Unknown":
                 if isinstance(other, Value):
                     return other._isUnknown
                 return False
-            case 'string_value':
+            case "string_value":
                 if isinstance(other, Value):
                     return self._value.string_value == other._value.string_value
                 if isinstance(other, str):
                     return self._value.string_value == other
                 return False
-            case 'null_value':
+            case "null_value":
                 if isinstance(other, Value):
                     return True
                 return other is None
-            case 'number_value':
+            case "number_value":
                 if isinstance(other, Value):
                     return self._value.number_value == other._value.number_value
                 if isinstance(other, (int, float)):
                     return self._value.number_value == other
                 return False
-            case 'bool_value':
+            case "bool_value":
                 if isinstance(other, Value):
                     return self._value.bool_value == other._value.bool_value
                 if isinstance(other, bool):
@@ -899,7 +950,7 @@ class Value:
 
     def __or__(self, other):
         kind = self._kind
-        if kind not in ('struct_value', 'Struct'):
+        if kind not in ("struct_value", "Struct"):
             return NotImplemented
         if not isinstance(other, (Value, dict)):
             return NotImplemented
@@ -917,56 +968,56 @@ class Value:
         result = Map()
         for key, value in other.items():
             result[key] = value
-        if self._kind not in ('struct_value', 'Struct'):
+        if self._kind not in ("struct_value", "Struct"):
             return NotImplemented
         for key, value in self:
             result[key] = value
         return result
 
     def __str__(self):
-        return format(self, '')
+        return format(self, "")
 
-    def __format__(self, spec='yaml'):
+    def __format__(self, spec="yaml"):
         if not spec:
             match self._kind:
-                case 'Unknown':
-                    return '<<UNKNOWN>>'
-                case 'string_value':
+                case "Unknown":
+                    return "<<UNKNOWN>>"
+                case "string_value":
                     return self._value.string_value
-                case 'null_value':
-                    return 'null'
-                case 'number_value':
+                case "null_value":
+                    return "null"
+                case "number_value":
                     value = self._value.number_value
                     if value.is_integer():
                         value = int(value)
                     return str(value)
-                case 'bool_value':
-                    return 'true' if self._value.bool_value else 'false'
+                case "bool_value":
+                    return "true" if self._value.bool_value else "false"
         return _formatObject(self, spec)
 
     def __int__(self):
         kind = self._kind
         match kind:
-            case 'string_value':
+            case "string_value":
                 return int(self._value.string_value)
-            case 'number_value':
+            case "number_value":
                 return int(self._value.number_value)
-            case 'bool_value':
+            case "bool_value":
                 return int(self._value.bool_value)
-            case 'Unknown':
+            case "Unknown":
                 return 0
         raise TypeError(f"Cannot convert kind to integer: {kind}")
 
     def __float__(self):
         kind = self._kind
         match kind:
-            case 'string_value':
+            case "string_value":
                 return float(self._value.string_value)
-            case 'number_value':
+            case "number_value":
                 return float(self._value.number_value)
-            case 'bool_value':
+            case "bool_value":
                 return float(self._value.bool_value)
-            case 'Unknown':
+            case "Unknown":
                 return 0.0
         raise TypeError(f"Cannot convert kind to float: {kind}")
 
@@ -988,25 +1039,25 @@ class Value:
                     if isinstance(key, int):
                         name += f"[{key}]"
                     else:
-                        if '.' in key:
+                        if "." in key:
                             name += f"[{key}]"
                         else:
                             name += f".{key}"
             return name
         if key is not None:
             return str(key)
-        return ''
+        return ""
 
     def __call__(self, *args, **kwargs):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
-        self.__dict__['_value'] = google.protobuf.struct_pb2.Value()
+        self.__dict__["_value"] = google.protobuf.struct_pb2.Value()
         self._cache.clear()
         self._dependencies.clear()
         self._unknowns.clear()
         if len(kwargs):
             if len(args):
-                raise ValueError('Connect specify both kwargs and args')
+                raise ValueError("Connect specify both kwargs and args")
             for key, value in kwargs.items():
                 self[key] = value
         elif len(args):
@@ -1024,12 +1075,12 @@ class Value:
             raise ValueError(f"{self._readOnly} is read only")
         key = self._validate_key(key)
         if isinstance(key, str):
-            if self._ensure_map() == 'struct_value':
+            if self._ensure_map() == "struct_value":
                 values = self._value.struct_value.fields
             else:
                 values = self._value.fields
         elif isinstance(key, int):
-            if self._ensure_list() == 'list_value':
+            if self._ensure_list() == "list_value":
                 values = self._value.list_value.values
             else:
                 values = self._value.values
@@ -1048,10 +1099,10 @@ class Value:
             value = value._protobuf_value
         if value is None:
             values[key].null_value = 0
-        elif isinstance(value, bool): # Must be before int check
+        elif isinstance(value, bool):  # Must be before int check
             values[key].bool_value = value
         elif isinstance(value, bytes):
-            values[key].string_value = value._value.decode('utf-8')
+            values[key].string_value = value._value.decode("utf-8")
         elif isinstance(value, str):
             values[key].string_value = value
         elif isinstance(value, (int, float)):
@@ -1069,7 +1120,7 @@ class Value:
             if isinstance(value._value, str):
                 values[key].string_value = value._value
             elif isinstance(value._value, bytes):
-                values[key].string_value = value._value.decode('utf-8')
+                values[key].string_value = value._value.decode("utf-8")
             elif value._value is None:
                 values[key].null_value = value._value.null_value
             elif isinstance(value._value, (int, float)):
@@ -1083,23 +1134,23 @@ class Value:
         elif isinstance(value, Value):
             self._dependencies[key] = value
             match value._kind:
-                case 'struct_value' | 'Struct':
+                case "struct_value" | "Struct":
                     values[key].struct_value.Clear()
                     for k, v in value:
                         self[key][k] = v
-                case 'list_value' | 'ListValue':
+                case "list_value" | "ListValue":
                     values[key].list_value.Clear()
                     for ix, v in enumerate(value):
                         self[key][ix] = v
-                case 'string_value':
+                case "string_value":
                     values[key].string_value = value._value.string_value
-                case 'null_value':
+                case "null_value":
                     values[key].null_value = value._value.null_value
-                case 'number_value':
+                case "number_value":
                     values[key].number_value = value._value.number_value
-                case 'bool_value':
+                case "bool_value":
                     values[key].bool_value = value._value.bool_value
-                case 'Unknown':
+                case "Unknown":
                     self._setUnknown(key, value)
                 case _:
                     raise ValueError(f"Unexpected value kind: {value._kind}")
@@ -1109,41 +1160,41 @@ class Value:
     @property
     def _raw(self):
         match self._kind:
-            case 'struct_value':
+            case "struct_value":
                 return self._value.struct_value
-            case 'list_value':
+            case "list_value":
                 return self._value.list_value
-            case 'string_value':
+            case "string_value":
                 return self._value.string_value
-            case 'null_value':
+            case "null_value":
                 return self._value.null_value
-            case 'number_value':
+            case "number_value":
                 return self._value.number_value
-            case 'bool_value':
+            case "bool_value":
                 return self._value.bool_value
-            case 'Struct' | 'ListValue':
+            case "Struct" | "ListValue":
                 return self._value
-            case 'Unknown':
+            case "Unknown":
                 return _Unknown
 
     def _setUnknown(self, key, value):
         self._dependencies.pop(key, None)
         self._unknowns[key] = value
         match self._kind:
-            case 'struct_value':
+            case "struct_value":
                 if key in self._value.struct_value.fields:
                     del self._value.struct_value[key]
-            case 'Struct':
+            case "Struct":
                 if key in self._value.fields:
                     del self._value[key]
-            case 'list_value':
+            case "list_value":
                 if key < len(self._value.list_value.values):
                     self._value.list_value.values[key].Clear()
                 for ix in reversed(range(len(self._value.list_value.values))):
                     if ix not in self._unknowns:
                         break
                     del self._value.list_value[ix]
-            case 'ListValue':
+            case "ListValue":
                 if key < len(self._value.values):
                     self._value.values[key].Clear()
                 for ix in reversed(range(len(self._value.values))):
@@ -1158,30 +1209,30 @@ class Value:
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
         kind = self._kind
-        if kind == 'Unknown':
+        if kind == "Unknown":
             return
         key = self._validate_key(key)
         if isinstance(key, str):
             match kind:
-                case 'struct_value':
+                case "struct_value":
                     if key in self._value.struct_value.fields:
                         del self._value.struct_value[key]
-                case 'Struct':
+                case "Struct":
                     if key in self._value.fields:
                         del self._value[key]
                 case _:
-                    raise ValueError(f"Invalid key \"{key}\" for kind: {self._kind}")
+                    raise ValueError(f'Invalid key "{key}" for kind: {self._kind}')
             self._cache.pop(key, None)
             self._dependencies.pop(key, None)
             self._unknowns.pop(key, None)
         elif isinstance(key, int):
             match kind:
-                case 'list_value':
+                case "list_value":
                     values = self._value.list_value
-                case 'ListValue':
+                case "ListValue":
                     values = self._value
                 case _:
-                    raise ValueError(f"Invalid key \"{key}\" for kind: {self._kind}")
+                    raise ValueError(f'Invalid key "{key}" for kind: {self._kind}')
             if key < len(values.values):
                 del values[key]
             self._cache.pop(key, None)
@@ -1209,14 +1260,14 @@ class Value:
             raise ValueError(f"{self._readOnly} is read only")
         key = self._validate_key(key)
         if isinstance(key, str):
-            if self._ensure_map() == 'struct_value':
+            if self._ensure_map() == "struct_value":
                 fields = self._value.struct_value.fields
             else:
                 fields = self._value.fields
             fields[key].Clear()
             return fields[key]
         if isinstance(key, int):
-            if self._ensure_list() == 'list_value':
+            if self._ensure_list() == "list_value":
                 values = self._value.list_value.values
             else:
                 values = self._value.values
@@ -1241,55 +1292,61 @@ class Value:
 
     def _ensure_map(self):
         kind = self._kind
-        if kind == 'Unknown':
+        if kind == "Unknown":
             if self._parent is None:
-                self.__dict__['_value'] = google.protobuf.struct_pb2.Value()
+                self.__dict__["_value"] = google.protobuf.struct_pb2.Value()
             else:
-                self.__dict__['_value'] = self._parent._create_child(self._key)
-            if isinstance(self._value, google.protobuf.struct_pb2.Value) and self._value.WhichOneof('kind') is None:
+                self.__dict__["_value"] = self._parent._create_child(self._key)
+            if (
+                isinstance(self._value, google.protobuf.struct_pb2.Value)
+                and self._value.WhichOneof("kind") is None
+            ):
                 self._value.struct_value.Clear()
             kind = self._kind
-        if kind not in ('struct_value', 'Struct'):
+        if kind not in ("struct_value", "Struct"):
             raise ValueError(f"Invalid map kind: {kind}")
         return kind
 
     def _ensure_list(self):
         kind = self._kind
-        if kind == 'Unknown':
+        if kind == "Unknown":
             if self._parent is None:
-                self.__dict__['_value'] = google.protobuf.struct_pb2.Value()
+                self.__dict__["_value"] = google.protobuf.struct_pb2.Value()
             else:
-                self.__dict__['_value'] = self._parent._create_child(self._key)
-            if isinstance(self._value, google.protobuf.struct_pb2.Value) and self._value.WhichOneof('kind') is None:
+                self.__dict__["_value"] = self._parent._create_child(self._key)
+            if (
+                isinstance(self._value, google.protobuf.struct_pb2.Value)
+                and self._value.WhichOneof("kind") is None
+            ):
                 self._value.list_value.Clear()
             kind = self._kind
-        if kind not in ('list_value', 'ListValue'):
+        if kind not in ("list_value", "ListValue"):
             raise ValueError(f"Invalid list kind: {kind}")
         return kind
 
     @property
     def _kind(self):
         if isinstance(self._value, google.protobuf.struct_pb2.Value):
-            return self._value.WhichOneof('kind') or 'Unknown'
+            return self._value.WhichOneof("kind") or "Unknown"
         if isinstance(self._value, google.protobuf.struct_pb2.Struct):
-            return 'Struct'
+            return "Struct"
         if isinstance(self._value, google.protobuf.struct_pb2.ListValue):
-            return 'ListValue'
+            return "ListValue"
         if self._value is _Unknown:
-            return 'Unknown'
+            return "Unknown"
         raise ValueError(f"Unexpected value type: {self._value.__class__}")
 
     @property
     def _isUnknown(self):
-        return self._kind == 'Unknown'
+        return self._kind == "Unknown"
 
     @property
     def _isMap(self):
-        return self._kind in ('struct_value', 'Struct')
+        return self._kind in ("struct_value", "Struct")
 
     @property
     def _isList(self):
-        return self._kind in ('list_value', 'ListValue')
+        return self._kind in ("list_value", "ListValue")
 
     @property
     def _getUnknowns(self):
@@ -1330,13 +1387,21 @@ class Value:
             for key, value in self:
                 if isinstance(value, Value) and len(value):
                     patch = patches[key]
-                    if isinstance(patch, Value) and patch._kind == value._kind and len(patch):
+                    if (
+                        isinstance(patch, Value)
+                        and patch._kind == value._kind
+                        and len(patch)
+                    ):
                         value._patchUnknowns(patch)
         elif self._isList:
             for ix, value in enumerate(self):
                 if isinstance(value, Value) and len(value):
                     patch = patches[ix]
-                    if isinstance(patch, Value) and patch._kind == value._kind and len(patch):
+                    if (
+                        isinstance(patch, Value)
+                        and patch._kind == value._kind
+                        and len(patch)
+                    ):
                         value._patchUnknowns(patch)
 
     def _renderUnknowns(self, trimFullName):
@@ -1353,13 +1418,13 @@ class Value:
                     value._renderUnknowns(trimFullName)
 
 
-def _formatObject(object, spec='yaml'):
+def _formatObject(object, spec="yaml"):
     match spec:
-        case 'json':
+        case "json":
             return json.dumps(object, indent=2, cls=_JSONEncoder)
-        case 'jsonc':
-            return json.dumps(object, separators=(',', ':'), cls=_JSONEncoder)
-        case 'protobuf':
+        case "jsonc":
+            return json.dumps(object, separators=(",", ":"), cls=_JSONEncoder)
+        case "protobuf":
             if isinstance(object, Message):
                 return str(object._message)
             if isinstance(object, (MapMessage, RepeatedMessage)):
@@ -1385,34 +1450,35 @@ class _JSONEncoder(json.JSONEncoder):
             return object._value
         if isinstance(object, Value):
             match object._kind:
-                case 'struct_value' | 'Struc':
+                case "struct_value" | "Struc":
                     return {key: value for key, value in object}
-                case 'list_value' | 'ListValue':
+                case "list_value" | "ListValue":
                     return [value for value in object]
-                case 'string_value':
+                case "string_value":
                     return object._value.string_value
-                case 'null_value':
+                case "null_value":
                     return None
-                case 'number_value':
+                case "number_value":
                     value = object._value.number_value
                     if value.is_integer():
                         value = int(value)
                     return value
-                case 'bool_value':
+                case "bool_value":
                     return object._value.bool_value
-                case 'Unknown':
-                    return '<<UNKNOWN>>'
+                case "Unknown":
+                    return "<<UNKNOWN>>"
                 case _:
-                    return '<<UNEXPECTED>>'
+                    return "<<UNEXPECTED>>"
         if isinstance(object, datetime.datetime):
             return object.isoformat()
-        return super(_JSONEncoder, self).default(object)
+        return super().default(object)
 
 
 class _Dumper(yaml.SafeDumper):
-
     def represent_str(self, data):
-        return self.represent_scalar('tag:yaml.org,2002:str', data, '|' if '\n' in data else None)
+        return self.represent_scalar(
+            "tag:yaml.org,2002:str", data, "|" if "\n" in data else None
+        )
 
     def represent_message_dict(self, message):
         return self.represent_dict({key: value for key, value in message})
@@ -1436,30 +1502,31 @@ class _Dumper(yaml.SafeDumper):
         if isinstance(field._value, bool):
             return self.represent_bool(field._value)
         if field._value is _Unknown:
-            return self.represent_str('<<UNKNOWN>>')
-        return self.represent_str('<<UNEXPECTED>>')
+            return self.represent_str("<<UNKNOWN>>")
+        return self.represent_str("<<UNEXPECTED>>")
 
     def represent_value(self, value):
         match value._kind:
-            case 'struct_value' | 'Struct':
-                return self.represent_dict({k:v for k,v in value})
-            case 'list_value' | 'ListValue':
+            case "struct_value" | "Struct":
+                return self.represent_dict({k: v for k, v in value})
+            case "list_value" | "ListValue":
                 return self.represent_list([v for v in value])
-            case 'string_value':
+            case "string_value":
                 return self.represent_str(value._value.string_value)
-            case 'null_value':
+            case "null_value":
                 return self.represent_none(None)
-            case 'number_value':
+            case "number_value":
                 value = value._value.number_value
                 if value.is_integer():
                     return self.represent_int(int(value))
                 return self.represent_float(value)
-            case 'bool_value':
+            case "bool_value":
                 return self.represent_bool(value._value.bool_value)
-            case 'Unknown':
-                return self.represent_str('<<UNKNOWN>>')
+            case "Unknown":
+                return self.represent_str("<<UNKNOWN>>")
             case _:
-                return self.represent_str('<<UNEXPECTED>>')
+                return self.represent_str("<<UNEXPECTED>>")
+
 
 _Dumper.add_representer(str, _Dumper.represent_str)
 _Dumper.add_representer(Message, _Dumper.represent_message_dict)

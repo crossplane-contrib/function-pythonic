@@ -1,11 +1,12 @@
-
 import datetime
+
 import yaml
-from google.protobuf.struct_pb2 import Struct, ListValue
+from google.protobuf.struct_pb2 import ListValue, Struct
 
 
 def yaml_load(text):
     return _yaml_clean(yaml.safe_load(text))
+
 
 def _yaml_clean(values):
     if isinstance(values, dict):
@@ -15,7 +16,7 @@ def _yaml_clean(values):
         for ix, value in enumerate(values):
             values[ix] = _yaml_clean(value)
     elif isinstance(values, datetime.datetime):
-        values = values.isoformat().replace('+00:00', 'Z')
+        values = values.isoformat().replace("+00:00", "Z")
     return values
 
 
@@ -23,7 +24,7 @@ def message_merge(message, values):
     for field, value in values.items():
         descriptor = message.DESCRIPTOR.fields_by_name.get(field)
         if not descriptor:
-            print('no field', message, field, value)
+            print("no field", message, field, value)
         if isinstance(value, (dict, list, tuple)):
             current = getattr(message, field)
             if isinstance(value, dict):
@@ -56,8 +57,9 @@ def message_merge(message, values):
             print(message, field, value, descriptor.type, descriptor.TYPE_BYTES)
             raise
 
+
 def message_map_merge(descriptor, message, values):
-    descriptor = descriptor.message_type.fields_by_name['value']
+    descriptor = descriptor.message_type.fields_by_name["value"]
     for field, value in values.items():
         if isinstance(value, (dict, list, tuple)):
             current = message[field]
@@ -70,12 +72,14 @@ def message_map_merge(descriptor, message, values):
                 value = value.encode()
             message[field] = value
 
+
 def message_list_merge(message, values):
     for ix, value in enumerate(values):
         if ix < len(message):
             message_merge(message[ix], value)
         else:
             message_merge(message.add(), value)
+
 
 def map_merge(message, values):
     for field, value in values.items():
@@ -93,6 +97,7 @@ def map_merge(message, values):
             continue
         message[field] = value
 
+
 def list_merge(message, values):
     for ix, value in enumerate(values):
         if ix < len(message):
@@ -107,13 +112,14 @@ def list_merge(message, values):
         else:
             message.append(value)
 
+
 def message_dict(message):
     result = {}
     for field, value in message.ListFields():
         if field.type == field.TYPE_MESSAGE:
-            if field.message_type.name == 'Struct':
+            if field.message_type.name == "Struct":
                 value = map_dict(value)
-            elif field.message_type.name == 'ListValue':
+            elif field.message_type.name == "ListValue":
                 value = list_list(value)
             elif field.is_repeated:
                 if field.message_type.GetOptions().map_entry:
@@ -130,14 +136,15 @@ def message_dict(message):
         result[field.name] = value
     return result
 
+
 def message_map_dict(descriptor, message):
-    descriptor = descriptor.message_type.fields_by_name['value']
+    descriptor = descriptor.message_type.fields_by_name["value"]
     result = {}
     for field, value in message.items():
         if descriptor.type == descriptor.TYPE_MESSAGE:
-            if descriptor.message_type.name == 'Struct':
+            if descriptor.message_type.name == "Struct":
                 value = map_dict(value)
-            elif descriptor.message_type.name == 'ListValue':
+            elif descriptor.message_type.name == "ListValue":
                 value = list_list(value)
             else:
                 value = message_dict(value)
@@ -149,13 +156,14 @@ def message_map_dict(descriptor, message):
         result[field] = value
     return result
 
+
 def message_list_list(descriptor, message):
     result = []
     for value in message:
         if descriptor.type == descriptor.TYPE_MESSAGE:
-            if descriptor.message_type.name == 'Struct':
+            if descriptor.message_type.name == "Struct":
                 value = map_dict(value)
-            elif descriptor.message_type.name == 'ListValue':
+            elif descriptor.message_type.name == "ListValue":
                 value = list_list(value)
             else:
                 value = message_dict(value)
@@ -167,6 +175,7 @@ def message_list_list(descriptor, message):
         result.append(value)
     return result
 
+
 def map_dict(message):
     result = {}
     for field, value in message.items():
@@ -174,11 +183,11 @@ def map_dict(message):
             value = map_dict(value)
         elif isinstance(value, ListValue):
             value = list_list(value)
-        elif isinstance(value, float):
-            if value.is_integer():
-                value = int(value)
+        elif isinstance(value, float) and value.is_integer():
+            value = int(value)
         result[field] = value
     return result
+
 
 def list_list(message):
     result = []
@@ -187,8 +196,7 @@ def list_list(message):
             value = map_dict(value)
         elif isinstance(value, ListValue):
             value = list_list(value)
-        elif isinstance(value, float):
-            if value.is_integer():
-                value = int(value)
+        elif isinstance(value, float) and value.is_integer():
+            value = int(value)
         result.append(value)
     return result

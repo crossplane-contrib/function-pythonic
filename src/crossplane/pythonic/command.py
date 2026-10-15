@@ -1,4 +1,3 @@
-
 import logging
 import pathlib
 import sys
@@ -11,7 +10,9 @@ class Command:
 
     @classmethod
     def create(cls, subparsers):
-        parser = subparsers.add_parser(cls.name, help=cls.help, description=cls.description)
+        parser = subparsers.add_parser(
+            cls.name, help=cls.help, description=cls.description
+        )
         parser.set_defaults(command=cls)
         cls.add_parser_arguments(parser)
 
@@ -22,45 +23,47 @@ class Command:
     @classmethod
     def add_function_arguments(cls, parser):
         parser.add_argument(
-            '--debug', '-d',
-            action='store_true',
-            help='Emit debug logs.',
+            "--debug",
+            "-d",
+            action="store_true",
+            help="Emit debug logs.",
         )
         parser.add_argument(
-            '--log-name-width',
+            "--log-name-width",
             type=int,
             default=40,
-            metavar='WIDTH',
-            help='Width of the logger name in the log output, default 40.',
+            metavar="WIDTH",
+            help="Width of the logger name in the log output, default 40.",
         )
         parser.add_argument(
-            '--logger-level',
-            action='append',
+            "--logger-level",
+            action="append",
             default=[],
-            metavar='LOGGER=LEVEL',
-            help='Logger level, for example: botocore.hooks=INFO',
+            metavar="LOGGER=LEVEL",
+            help="Logger level, for example: botocore.hooks=INFO",
         )
         parser.add_argument(
-            '--python-path',
-            action='append',
+            "--python-path",
+            action="append",
             default=[],
-            metavar='DIRECTORY',
-            help='Filing system directories to add to the python path.',
+            metavar="DIRECTORY",
+            help="Filing system directories to add to the python path.",
         )
         parser.add_argument(
-            '--render-unknowns', '-u',
-            action='store_true',
-            help='Render resources with unknowns, useful during local development.'
+            "--render-unknowns",
+            "-u",
+            action="store_true",
+            help="Render resources with unknowns, useful during local development.",
         )
         parser.add_argument(
-            '--allow-oversize-protos',
-            action='store_true',
-            help='Allow oversized protobuf messages',
+            "--allow-oversize-protos",
+            action="store_true",
+            help="Allow oversized protobuf messages",
         )
         parser.add_argument(
-            '--crossplane-v1',
-            action='store_true',
-            help='Enable Crossplane V1 compatibility mode',
+            "--crossplane-v1",
+            action="store_true",
+            help="Enable Crossplane V1 compatibility mode",
         )
 
     def __init__(self, args=None):
@@ -78,14 +81,14 @@ class Command:
         logger.handlers = [handler]
         logger.setLevel(logging.DEBUG if self.args.debug else logging.INFO)
         # Suppress noisy libraries, these can be overriden using --logger-level
-        logging.getLogger('asyncio').setLevel(logging.INFO)
-        logging.getLogger('grpc').setLevel(logging.INFO)
-        logging.getLogger('httpcore').setLevel(logging.INFO)
-        logging.getLogger('httpx').setLevel(logging.WARNING)
-        logging.getLogger('kr8s').setLevel(logging.INFO)
-        for logger_level in self.args.logger_level:
-            for logger_level in logger_level.split(','):
-                logger_level = logger_level.split('=')
+        logging.getLogger("asyncio").setLevel(logging.INFO)
+        logging.getLogger("grpc").setLevel(logging.INFO)
+        logging.getLogger("httpcore").setLevel(logging.INFO)
+        logging.getLogger("httpx").setLevel(logging.WARNING)
+        logging.getLogger("kr8s").setLevel(logging.INFO)
+        for logger_levels in self.args.logger_level:
+            for logger_level in logger_levels.split(","):
+                logger_level = logger_level.split("=")
                 if len(logger_level) == 2:
                     logging.getLogger(logger_level[0]).setLevel(logger_level[1].upper())
 
@@ -94,6 +97,7 @@ class Command:
 
         if self.args.allow_oversize_protos:
             from google.protobuf.internal import api_implementation
+
             if api_implementation._c_module:
                 api_implementation._c_module.SetAllowOversizeProtos(True)
 
@@ -103,10 +107,10 @@ class Command:
 
 class Formatter(logging.Formatter):
     def __init__(self, name_width):
-        super(Formatter, self).__init__(
+        super().__init__(
             f"[{{asctime}}.{{msecs:03.0f}}] {{sname:{name_width}.{name_width}}} [{{levelname:8.8}}] {{message}}",
-            '%Y-%m-%d %H:%M:%S',
-            '{',
+            "%Y-%m-%d %H:%M:%S",
+            "{",
         )
         self.name_width = name_width
 
@@ -114,12 +118,12 @@ class Formatter(logging.Formatter):
         record.sname = record.name
         extra = len(record.sname) - self.name_width
         if extra > 0:
-            names = record.sname.split('.')
+            names = record.sname.split(".")
             for ix, name in enumerate(names):
                 if len(name) > extra:
                     names[ix] = name[extra:]
                     break
                 names[ix] = name[:1]
                 extra -= len(name) - 1
-            record.sname = '.'.join(names)
-        return super(Formatter, self).format(record)
+            record.sname = ".".join(names)
+        return super().format(record)

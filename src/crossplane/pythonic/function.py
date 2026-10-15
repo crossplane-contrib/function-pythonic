@@ -7,9 +7,10 @@ import logging
 import sys
 
 import grpc
+
+from .. import pythonic
 from .proto.v1 import run_function_pb2 as fnv1
 from .proto.v1 import run_function_pb2_grpc as grpcv1
-from .. import pythonic
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
             module = module[:ix]
             if module in sys.modules:
                 del sys.modules[module]
-            ix = module.rfind('.')
+            ix = module.rfind(".")
         importlib.invalidate_caches()
         self.clazzes.clear()
 
@@ -38,82 +39,117 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
     ) -> fnv1.RunFunctionResponse:
         try:
             return await self.run_function(request)
-        except Exception as e:
-            return self.fatal(request, logger, 'RunFunction', e)
+        except Exception as e:  # noqa: BLE001
+            return self.fatal(request, logger, "RunFunction", e)
 
     async def run_function(self, request):
         composite = request.observed.composite.resource
         if composite and composite.fields:
-            name = list(reversed(composite['apiVersion'].split('/')[0].split('.')))
-            name.append(composite['kind'])
-            name.append(composite['metadata']['name'])
-            logger = logging.getLogger('.'.join(name))
-            if 'inlined' in request.input and request.input['inlined']:
-                if 'spec' not in composite or request.input['inlined'] not in composite['spec']:
-                    return self.fatal(request, logger, f"Missing inlined spec.{request.input['inlined']}")
-                composite = composite['spec'][request.input['inlined']]
+            name = list(reversed(composite["apiVersion"].split("/")[0].split(".")))
+            name.append(composite["kind"])
+            name.append(composite["metadata"]["name"])
+            logger = logging.getLogger(".".join(name))
+            if "inlined" in request.input and request.input["inlined"]:  # noqa: RUF019
+                if (
+                    "spec" not in composite
+                    or request.input["inlined"] not in composite["spec"]
+                ):
+                    return self.fatal(
+                        request,
+                        logger,
+                        f"Missing inlined spec.{request.input['inlined']}",
+                    )
+                composite = composite["spec"][request.input["inlined"]]
             else:
-                if 'composite' not in request.input:
-                    return self.fatal(request, logger, 'Missing composition input "composite"')
-                composite = request.input['composite']
+                if "composite" not in request.input:
+                    return self.fatal(
+                        request, logger, 'Missing composition input "composite"'
+                    )
+                composite = request.input["composite"]
             operation = False
         else:
-            logger = logging.getLogger('operation')
-            if 'composite' not in request.input:
-                return self.fatal(request, logger, 'Missing operation input "composite"')
-            composite = request.input['composite']
+            logger = logging.getLogger("operation")
+            if "composite" not in request.input:
+                return self.fatal(
+                    request, logger, 'Missing operation input "composite"'
+                )
+            composite = request.input["composite"]
             operation = True
 
         # Ideally this is something the Function API provides
-        if 'step' in request.input:
-            step = request.input['step']
+        if "step" in request.input:
+            step = request.input["step"]
         else:
             step = str(hash(composite))
 
         clazz = self.clazzes.get(composite)
         if not clazz:
-            if '\n' in composite:
+            if "\n" in composite:
                 module = Module()
                 try:
-                    exec(composite, module.__dict__)
-                except Exception as e:
-                    return self.fatal(request, logger, 'Exec', e)
+                    exec(composite, module.__dict__)  # noqa: S102
+                except Exception as e:  # noqa: BLE001
+                    return self.fatal(request, logger, "Exec", e)
                 for field in dir(module):
                     value = getattr(module, field)
-                    if inspect.isclass(value) and issubclass(value, pythonic.BaseComposite) and value != pythonic.BaseComposite:
+                    if (
+                        inspect.isclass(value)
+                        and issubclass(value, pythonic.BaseComposite)
+                        and value != pythonic.BaseComposite
+                    ):
                         if clazz:
-                            return self.fatal(request, logger, 'Composite script has multiple BaseComposite classes')
+                            return self.fatal(
+                                request,
+                                logger,
+                                "Composite script has multiple BaseComposite classes",
+                            )
                         clazz = value
                 if not clazz:
-                    return self.fatal(request, logger, 'Composite script does not have a BaseComposite class')
+                    return self.fatal(
+                        request,
+                        logger,
+                        "Composite script does not have a BaseComposite class",
+                    )
             else:
-                composite = composite.rsplit('.', 1)
+                composite = composite.rsplit(".", 1)
                 if len(composite) == 1:
-                    return self.fatal(request, logger, f"Composite class name does not include module: {composite[0]}")
+                    return self.fatal(
+                        request,
+                        logger,
+                        f"Composite class name does not include module: {composite[0]}",
+                    )
                 try:
                     module = importlib.import_module(composite[0])
-                except Exception as e:
-                    return self.fatal(request, logger, 'Import module', e)
+                except Exception as e:  # noqa: BLE001
+                    return self.fatal(request, logger, "Import module", e)
                 clazz = getattr(module, composite[1], None)
                 if not clazz:
-                    return self.fatal(request, logger, f"{composite[0]} does not define: {composite[1]}")
-                composite = '.'.join(composite)
+                    return self.fatal(
+                        request,
+                        logger,
+                        f"{composite[0]} does not define: {composite[1]}",
+                    )
+                composite = ".".join(composite)
                 if not inspect.isclass(clazz):
                     return self.fatal(request, logger, f"{composite} is not a class")
                 if not issubclass(clazz, pythonic.BaseComposite):
-                    return self.fatal(request, logger, f"{composite} is not a subclass of BaseComposite")
+                    return self.fatal(
+                        request,
+                        logger,
+                        f"{composite} is not a subclass of BaseComposite",
+                    )
             self.clazzes[composite] = clazz
 
         if operation:
-            if '\n' in composite:
+            if "\n" in composite:
                 logger = logging.getLogger(f"operation.{clazz.__name__}")
             else:
                 logger = logging.getLogger(f"operation.{composite}")
 
         try:
             composite = clazz(self.crossplane_v1, request, logger)
-        except Exception as e:
-            return self.fatal(request, logger, 'Instantiate', e)
+        except Exception as e:  # noqa: BLE001
+            return self.fatal(request, logger, "Instantiate", e)
 
         step = composite.context._pythonic[step]
         iteration = int(step.iteration) + 1
@@ -121,18 +157,22 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         composite.context.iteration = iteration
         if iteration == 1 and not logger.isEnabledFor(logging.DEBUG):
             if len(composite.context._pythonic) == 1:
-                logger.info('Starting compose')
+                logger.info("Starting compose")
             else:
-                logger.info(f"Starting compose, {ordinal(len(composite.context._pythonic))} step")
+                logger.info(
+                    f"Starting compose, {ordinal(len(composite.context._pythonic))} step"
+                )
         else:
-            logger.debug(f"Starting compose, {ordinal(len(composite.context._pythonic))} step, {ordinal(iteration)} pass")
+            logger.debug(
+                f"Starting compose, {ordinal(len(composite.context._pythonic))} step, {ordinal(iteration)} pass"
+            )
 
         try:
             result = composite.compose()
             if asyncio.iscoroutine(result):
                 await result
-        except Exception as e:
-            return self.fatal(request, logger, 'Compose', e)
+        except Exception as e:  # noqa: BLE001
+            return self.fatal(request, logger, "Compose", e)
 
         schemas = self.get_schemas(step, composite)
         requireds = self.get_requireds(step, composite)
@@ -146,19 +186,19 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
             self.process_unknowns(composite)
             # Perform auto ready on all resources.
             for name, resource in composite.resources:
-                resource.ready
-            logger.info('Completed compose')
+                resource.ready  # noqa: B018
+            logger.info("Completed compose")
 
         return composite.response._message
 
     def fatal(self, request, logger, message, exception=None):
         if exception:
-            message += ' exception'
+            message += " exception"
             logger.exception(message)
             m = str(exception)
             if not m:
                 m = exception.__class__.__name__
-            message += ': ' + m
+            message += ": " + m
         else:
             logger.error(message)
         return fnv1.RunFunctionResponse(
@@ -170,7 +210,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                     severity=fnv1.SEVERITY_FATAL,
                     message=message,
                 )
-            ]
+            ],
         )
 
     def get_schemas(self, step, composite):
@@ -201,9 +241,9 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
 
     def process_usages(self, composite):
         if self.crossplane_v1:
-            apiVersion = 'apiextensions.crossplane.io/v1beta1'
+            apiVersion = "apiextensions.crossplane.io/v1beta1"
         else:
-            apiVersion = 'protection.crossplane.io/v1beta1'
+            apiVersion = "protection.crossplane.io/v1beta1"
         for _, resource in sorted(entry for entry in composite.resources):
             dependencies = resource.desired._getDependencies
             if dependencies:
@@ -216,34 +256,41 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                     resources = {}
                     requireds = {}
                     for destination, source in sorted(dependencies.items()):
-                        name = source.split('.')
-                        if (len(name) > 5 and
-                            name[0] in ('request', 'response') and
-                            name[1] in ('observed', 'desired') and
-                            name[2] == 'resources' and
-                            name[4] == 'resource'
+                        name = source.split(".")
+                        if (
+                            len(name) > 5
+                            and name[0] in ("request", "response")
+                            and name[1] in ("observed", "desired")
+                            and name[2] == "resources"
+                            and name[4] == "resource"
                         ):
                             if name[3] not in resources:
                                 resources[name[3]] = []
-                            resources[name[3]].append(f"{'.'.join(destination.split('.')[5:])} = {'.'.join(name[5:])}")
-                        elif (len(name) > 5 and
-                            name[0] == 'request' and
-                            name[1] in ('required_resources', 'extra_resources') and
-                            name[3].startswith('items[') and name[3][-1] == ']' and
-                            name[4] == 'resource'
+                            resources[name[3]].append(
+                                f"{'.'.join(destination.split('.')[5:])} = {'.'.join(name[5:])}"
+                            )
+                        elif (
+                            len(name) > 5
+                            and name[0] == "request"
+                            and name[1] in ("required_resources", "extra_resources")
+                            and name[3].startswith("items[")
+                            and name[3][-1] == "]"
+                            and name[4] == "resource"
                         ):
                             key = (name[2], int(name[3][6:-1]))
                             if key not in requireds:
                                 requireds[key] = []
-                            requireds[key].append(f"{'.'.join(destination.split('.')[5:])} = {'.'.join(name[5:])}")
+                            requireds[key].append(
+                                f"{'.'.join(destination.split('.')[5:])} = {'.'.join(name[5:])}"
+                            )
                     for name, dependencies in resources.items():
                         source = composite.resources[name]
                         name = [resource.name, str(source.kind)]
                         if source.metadata.namespace:
                             name.append(str(source.metadata.namespace))
                         name.append(str(source.observed.metadata.name))
-                        usage = composite.resources['_'.join(name)](apiVersion, 'Usage')
-                        usage.spec.reason = '\n'.join(dependencies)
+                        usage = composite.resources["_".join(name)](apiVersion, "Usage")
+                        usage.spec.reason = "\n".join(dependencies)
                         usage.spec.replayDeletion = True
                         usage.spec.by.apiVersion = resource.apiVersion
                         usage.spec.by.kind = resource.kind
@@ -253,22 +300,34 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                         usage.spec.of.resourceRef.name = source.observed.metadata.name
                         if not self.crossplane_v1:
                             if composite.metadata.namespace:
-                                if source.metadata.namespace and source.metadata.namespace != composite.metadata.namespace:
-                                    usage.spec.of.resourceRef.namespace = source.metadata.namespace
+                                if (
+                                    source.metadata.namespace
+                                    and source.metadata.namespace
+                                    != composite.metadata.namespace
+                                ):
+                                    usage.spec.of.resourceRef.namespace = (
+                                        source.metadata.namespace
+                                    )
                             elif resource.metadata.namespace:
                                 usage.metadata.namespace = resource.metadata.namespace
-                                if source.metadata.namespace and source.metadata.namespace != resource.metadata.namespace:
-                                    usage.spec.of.resourceRef.namespace = source.metadata.namespace
+                                if (
+                                    source.metadata.namespace
+                                    and source.metadata.namespace
+                                    != resource.metadata.namespace
+                                ):
+                                    usage.spec.of.resourceRef.namespace = (
+                                        source.metadata.namespace
+                                    )
                             else:
-                                usage.kind = 'ClusterUsage'
+                                usage.kind = "ClusterUsage"
                     for key, dependencies in requireds.items():
                         source = composite.requireds[key[0]][key[1]]
                         name = [resource.name, str(source.kind)]
                         if source.metadata.namespace:
                             name.append(str(source.metadata.namespace))
                         name.append(str(source.metadata.name))
-                        usage = composite.resources['_'.join(name)](apiVersion, 'Usage')
-                        usage.spec.reason = '\n'.join(dependencies)
+                        usage = composite.resources["_".join(name)](apiVersion, "Usage")
+                        usage.spec.reason = "\n".join(dependencies)
                         usage.spec.replayDeletion = True
                         usage.spec.by.apiVersion = resource.apiVersion
                         usage.spec.by.kind = resource.kind
@@ -278,14 +337,26 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                         usage.spec.of.resourceRef.name = source.observed.metadata.name
                         if not self.crossplane_v1:
                             if composite.metadata.namespace:
-                                if source.metadata.namespace and source.metadata.namespace != composite.metadata.namespace:
-                                    usage.spec.of.resourceRef.namespace = source.metadata.namespace
+                                if (
+                                    source.metadata.namespace
+                                    and source.metadata.namespace
+                                    != composite.metadata.namespace
+                                ):
+                                    usage.spec.of.resourceRef.namespace = (
+                                        source.metadata.namespace
+                                    )
                             elif resource.metadata.namespace:
                                 usage.metadata.namespace = resource.metadata.namespace
-                                if source.metadata.namespace and source.metadata.namespace != resource.metadata.namespace:
-                                    usage.spec.of.resourceRef.namespace = source.metadata.namespace
+                                if (
+                                    source.metadata.namespace
+                                    and source.metadata.namespace
+                                    != resource.metadata.namespace
+                                ):
+                                    usage.spec.of.resourceRef.namespace = (
+                                        source.metadata.namespace
+                                    )
                             else:
-                                usage.kind = 'ClusterUsage'
+                                usage.kind = "ClusterUsage"
 
     def process_unknowns(self, composite):
         unknownResources = []
@@ -300,7 +371,9 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                 if resource.observed:
                     warningResources.append(name)
                     warning = True
-                    if resource.unknownsFatal or (resource.unknownsFatal is None and composite.unknownsFatal):
+                    if resource.unknownsFatal or (
+                        resource.unknownsFatal is None and composite.unknownsFatal
+                    ):
                         fatalResources.append(name)
                         fatal = True
                 if composite.logger.isEnabledFor(logging.DEBUG):
@@ -308,11 +381,17 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                         destination = self.trimFullName(destination)
                         source = self.trimFullName(source)
                         if fatal:
-                            composite.logger.error(f'Observed unknown: {destination} = {source}')
+                            composite.logger.error(
+                                f"Observed unknown: {destination} = {source}"
+                            )
                         elif warning:
-                            composite.logger.warning(f'Observed unknown: {destination} = {source}')
+                            composite.logger.warning(
+                                f"Observed unknown: {destination} = {source}"
+                            )
                         else:
-                            composite.logger.debug(f'Desired unknown: {destination} = {source}')
+                            composite.logger.debug(
+                                f"Desired unknown: {destination} = {source}"
+                            )
                 if resource.observed:
                     resource.desired._patchUnknowns(resource.observed)
                 elif self.renderUnknowns:
@@ -322,26 +401,26 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
 
         if fatalResources:
             level = composite.logger.error
-            reason = 'FatalUnknowns'
+            reason = "FatalUnknowns"
             message = f"Observed resources with unknowns: {','.join(fatalResources)}"
             status = False
             result = composite.results.fatal
         elif warningResources:
             level = composite.logger.warning
-            reason = 'ObservedUnknowns'
+            reason = "ObservedUnknowns"
             message = f"Observed resources with unknowns: {','.join(warningResources)}"
             status = False
             result = composite.results.warning
         elif unknownResources:
             level = composite.logger.info
-            reason = 'DesiredUnknowns'
+            reason = "DesiredUnknowns"
             message = f"Desired resources with unknowns: {','.join(unknownResources)}"
             status = False
             result = composite.results.info
         else:
             level = None
-            reason = 'AllComposed'
-            message = 'All resources are composed'
+            reason = "AllComposed"
+            message = "All resources are composed"
             status = True
             result = None
         if not composite.logger.isEnabledFor(logging.DEBUG) and level:
@@ -351,23 +430,26 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
             result(reason, message)
 
     def trimFullName(self, name):
-        name = name.split('.')
+        name = name.split(".")
         for values in (
-                ('request', 'observed', 'composite', 'resource'),
-                ('response', 'desired', 'composite', 'resource'),
-                ('request', 'observed', 'resources', None, 'resource'),
-                ('response', 'desired', 'resources', None, 'resource'),
-                ('request', 'required_resources', None, 'items', None, 'resource'),
-                ('request', 'extra_resources', None, 'items', None, 'resource'),
+            ("request", "observed", "composite", "resource"),
+            ("response", "desired", "composite", "resource"),
+            ("request", "observed", "resources", None, "resource"),
+            ("response", "desired", "resources", None, "resource"),
+            ("request", "required_resources", None, "items", None, "resource"),
+            ("request", "extra_resources", None, "items", None, "resource"),
         ):
             if len(values) < len(name):
                 ix = 0
                 for iv, value in enumerate(values):
-                    if value:
-                        if value != name[ix]:
-                            if not name[ix].startswith(f"{values[iv]}[") or iv+1 >= len(values) or values[iv+1]:
-                                break
-                            continue
+                    if value and value != name[ix]:
+                        if (
+                            not name[ix].startswith(f"{value}[")
+                            or iv + 1 >= len(values)
+                            or values[iv + 1]
+                        ):
+                            break
+                        continue
                     ix += 1
                 else:
                     ix = 0
@@ -376,22 +458,22 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                             if value == name[ix]:
                                 del name[ix]
                             elif ix:
-                                name[ix-1] += name[ix][len(value):]
+                                name[ix - 1] += name[ix][len(value) :]
                                 del name[ix]
                             else:
-                                name[ix] = name[ix][len(value):]
+                                name[ix] = name[ix][len(value) :]
                         else:
                             ix += 1
                     break
-        return '.'.join(name)
+        return ".".join(name)
 
 
 def ordinal(ix):
     ix = int(ix)
     if 11 <= (ix % 100) <= 13:
-        suffix = 'th'
+        suffix = "th"
     else:
-        suffix = ['th', 'st', 'nd', 'rd', 'th'][min(ix % 10, 4)]
+        suffix = ["th", "st", "nd", "rd", "th"][min(ix % 10, 4)]
     return str(ix) + suffix
 
 

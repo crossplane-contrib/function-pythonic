@@ -23,12 +23,12 @@ def resource(plural):
 class FakeKopfOn:
     def __init__(self):
         self.registrations = {
-            'cleanup': [],
-            'create': [],
-            'delete': [],
-            'resume': [],
-            'startup': [],
-            'update': [],
+            "cleanup": [],
+            "create": [],
+            "delete": [],
+            "resume": [],
+            "startup": [],
+            "update": [],
         }
 
     def _register(self, event, *args, **kwargs):
@@ -39,51 +39,51 @@ class FakeKopfOn:
         return decorator
 
     def cleanup(self, *args, **kwargs):
-        return self._register('cleanup', *args, **kwargs)
+        return self._register("cleanup", *args, **kwargs)
 
     def create(self, *args, **kwargs):
-        return self._register('create', *args, **kwargs)
+        return self._register("create", *args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        return self._register('delete', *args, **kwargs)
+        return self._register("delete", *args, **kwargs)
 
     def resume(self, *args, **kwargs):
-        return self._register('resume', *args, **kwargs)
+        return self._register("resume", *args, **kwargs)
 
     def startup(self, *args, **kwargs):
-        return self._register('startup', *args, **kwargs)
+        return self._register("startup", *args, **kwargs)
 
     def update(self, *args, **kwargs):
-        return self._register('update', *args, **kwargs)
+        return self._register("update", *args, **kwargs)
 
 
 class FakeKopf(types.ModuleType):
     def __init__(self):
-        super().__init__('kopf')
+        super().__init__("kopf")
         self.PRESENT = object()
         self.on = FakeKopfOn()
         self.operator_calls = []
 
     def operator(self, *args, **kwargs):
         self.operator_calls.append((args, kwargs))
-        return {'args': args, 'kwargs': kwargs}
+        return {"args": args, "kwargs": kwargs}
 
 
 @pytest.fixture
 def packages_module(monkeypatch, tmp_path):
     fake_kopf = FakeKopf()
-    monkeypatch.setitem(sys.modules, 'kopf', fake_kopf)
-    sys.modules.pop('crossplane.pythonic.packages', None)
-    packages = importlib.import_module('crossplane.pythonic.packages')
+    monkeypatch.setitem(sys.modules, "kopf", fake_kopf)
+    sys.modules.pop("crossplane.pythonic.packages", None)
+    packages = importlib.import_module("crossplane.pythonic.packages")
 
-    monkeypatch.setattr(packages, 'PACKAGES_DIR', tmp_path.resolve())
-    monkeypatch.setattr(packages, 'GRPC_RUNNER', DummyRunner())
-    monkeypatch.setattr(packages, 'GRPC_SERVER', None)
-    monkeypatch.setattr(sys, 'path', sys.path.copy())
+    monkeypatch.setattr(packages, "PACKAGES_DIR", tmp_path.resolve())
+    monkeypatch.setattr(packages, "GRPC_RUNNER", DummyRunner())
+    monkeypatch.setattr(packages, "GRPC_SERVER", None)
+    monkeypatch.setattr(sys, "path", sys.path.copy())
 
     yield packages, fake_kopf
 
-    sys.modules.pop('crossplane.pythonic.packages', None)
+    sys.modules.pop("crossplane.pythonic.packages", None)
 
 
 def test_operator_registers_resources_and_sets_global_state(
@@ -98,7 +98,7 @@ def test_operator_registers_resources_and_sets_global_state(
 
     monkeypatch.setattr(
         packages,
-        'on_resource',
+        "on_resource",
         lambda *args: on_resource_calls.append(args),
     )
 
@@ -118,22 +118,22 @@ def test_operator_registers_resources_and_sets_global_state(
     assert packages.PACKAGES_DIR == tmp_path.resolve()
     assert sys.path[0] == str(tmp_path.resolve())
     assert on_resource_calls == [
-        ('', 'v1', 'configmaps'),
-        ('', 'v1', 'secrets'),
-        ('apiextensions.crossplane.io', 'v1beta1', 'environmentconfigs'),
-        ('apiextensions.crossplane.io', 'v1', 'compositions'),
+        ("", "v1", "configmaps"),
+        ("", "v1", "secrets"),
+        ("apiextensions.crossplane.io", "v1beta1", "environmentconfigs"),
+        ("apiextensions.crossplane.io", "v1", "compositions"),
     ]
     assert fake_kopf.operator_calls == [
         (
             (),
             {
-                'standalone': True,
-                'clusterwide': True,
-                'namespaces': None,
+                "standalone": True,
+                "clusterwide": True,
+                "namespaces": None,
             },
         )
     ]
-    assert result['kwargs']['clusterwide'] is True
+    assert result["kwargs"]["clusterwide"] is True
 
 
 def test_operator_uses_namespaces_and_skips_cluster_resources(
@@ -146,7 +146,7 @@ def test_operator_uses_namespaces_and_skips_cluster_resources(
 
     monkeypatch.setattr(
         packages,
-        'on_resource',
+        "on_resource",
         lambda *args: on_resource_calls.append(args),
     )
 
@@ -155,20 +155,20 @@ def test_operator_uses_namespaces_and_skips_cluster_resources(
         DummyRunner(),
         True,
         False,
-        ['team-a'],
+        ["team-a"],
         True,
         True,
         str(tmp_path),
     )
 
-    assert on_resource_calls == [('', 'v1', 'configmaps')]
+    assert on_resource_calls == [("", "v1", "configmaps")]
     assert fake_kopf.operator_calls == [
         (
             (),
             {
-                'standalone': True,
-                'clusterwide': False,
-                'namespaces': ['team-a'],
+                "standalone": True,
+                "clusterwide": False,
+                "namespaces": ["team-a"],
             },
         )
     ]
@@ -177,17 +177,17 @@ def test_operator_uses_namespaces_and_skips_cluster_resources(
 def test_on_resource_registers_handlers(packages_module):
     packages, fake_kopf = packages_module
 
-    packages.on_resource('group.example.io', 'v1alpha1', 'widgets')
+    packages.on_resource("group.example.io", "v1alpha1", "widgets")
 
     for event, handler in (
-        ('create', packages.create),
-        ('resume', packages.create),
-        ('update', packages.update),
-        ('delete', packages.delete),
+        ("create", packages.create),
+        ("resume", packages.create),
+        ("update", packages.update),
+        ("delete", packages.delete),
     ):
         args, kwargs, fn = fake_kopf.on.registrations[event][-1]
-        assert args == ('group.example.io', 'v1alpha1', 'widgets')
-        assert kwargs == {'labels': packages.PACKAGE_LABELS}
+        assert args == ("group.example.io", "v1alpha1", "widgets")
+        assert kwargs == {"labels": packages.PACKAGE_LABELS}
         assert fn is handler
 
 
@@ -200,8 +200,8 @@ async def test_startup_and_cleanup(packages_module, monkeypatch):
     async def stop(grace):
         server.stop_calls.append(grace)
 
-    monkeypatch.setattr(server, 'stop', stop)
-    monkeypatch.setattr(packages, 'GRPC_SERVER', server)
+    monkeypatch.setattr(server, "stop", stop)
+    monkeypatch.setattr(packages, "GRPC_SERVER", server)
 
     await packages.startup(settings)
     await packages.cleanup()
@@ -211,15 +211,15 @@ async def test_startup_and_cleanup(packages_module, monkeypatch):
 
 
 @pytest.mark.parametrize(
-    ('name', 'value', 'expected'),
+    ("name", "value", "expected"),
     [
-        ('module.py', 'print(1)\n', True),
-        ('data', 'payload', True),
-        ('package', {}, True),
-        ('bad-name.py', 'print(1)\n', False),
-        ('good.name', 'payload', True),
-        ('bad/name', 'payload', False),
-        ('package', 1, False),
+        ("module.py", "print(1)\n", True),
+        ("data", "payload", True),
+        ("package", {}, True),
+        ("bad-name.py", "print(1)\n", False),
+        ("good.name", "payload", True),
+        ("bad/name", "payload", False),
+        ("package", 1, False),
     ],
 )
 def test_validate_entry(packages_module, caplog, name, value, expected):
@@ -242,16 +242,16 @@ def test_resource_package_dir_uses_label_for_configmaps_and_secrets(
     packages, _ = packages_module
     logger = logging.getLogger(__name__)
     labels = {
-        'function-pythonic.package': 'pkg.subpackage',
+        "function-pythonic.package": "pkg.subpackage",
     }
 
     package_dir = packages.resource_package_dir(
-        resource('configmaps'),
+        resource("configmaps"),
         labels,
         logger,
     )
 
-    assert package_dir == tmp_path / 'pkg' / 'subpackage'
+    assert package_dir == tmp_path / "pkg" / "subpackage"
 
 
 def test_resource_package_dir_validates_labels(packages_module, caplog, tmp_path):
@@ -259,12 +259,12 @@ def test_resource_package_dir_validates_labels(packages_module, caplog, tmp_path
     logger = logging.getLogger(__name__)
 
     with caplog.at_level(logging.ERROR):
-        assert packages.resource_package_dir(resource('configmaps'), {}, logger) is None
+        assert packages.resource_package_dir(resource("configmaps"), {}, logger) is None
         assert (
             packages.resource_package_dir(
-                resource('secrets'),
+                resource("secrets"),
                 {
-                    'function-pythonic.package': 'not-valid.segment',
+                    "function-pythonic.package": "not-valid.segment",
                 },
                 logger,
             )
@@ -272,28 +272,31 @@ def test_resource_package_dir_validates_labels(packages_module, caplog, tmp_path
         )
 
     assert caplog.messages == [
-        'function-pythonic.package label is missing',
-        'Package has invalid package name: not-valid.segment',
+        "function-pythonic.package label is missing",
+        "Package has invalid package name: not-valid.segment",
     ]
-    assert packages.resource_package_dir(
-        resource('compositions'),
-        {
-            'function-pythonic.package': 'ignored.for.compositions',
-        },
-        logger,
-    ) == tmp_path
+    assert (
+        packages.resource_package_dir(
+            resource("compositions"),
+            {
+                "function-pythonic.package": "ignored.for.compositions",
+            },
+            logger,
+        )
+        == tmp_path
+    )
 
 
 def test_package_file_name_maps_python_modules(packages_module, tmp_path):
     packages, _ = packages_module
 
-    assert packages.package_file_name(tmp_path / 'pkg' / 'mod.py') == (
+    assert packages.package_file_name(tmp_path / "pkg" / "mod.py") == (
         True,
-        'pkg.mod',
+        "pkg.mod",
     )
-    assert packages.package_file_name(tmp_path / 'pkg' / 'data.txt') == (
+    assert packages.package_file_name(tmp_path / "pkg" / "data.txt") == (
         False,
-        'pkg/data.txt',
+        "pkg/data.txt",
     )
 
 
@@ -308,25 +311,25 @@ def test_package_create_writes_files_and_invalidates_modules(
     packages.GRPC_RUNNER = runner
 
     packages.package_create(
-        resource('configmaps'),
-        'Created',
+        resource("configmaps"),
+        "Created",
         tmp_path,
         {
-            'pkg': {
-                '__init__.py': '',
-                'module.py': 'value = 1\n',
-                'data': 'payload',
+            "pkg": {
+                "__init__.py": "",
+                "module.py": "value = 1\n",
+                "data": "payload",
             },
-            'bad-name.py': 'ignore me',
+            "bad-name.py": "ignore me",
         },
         logger,
     )
 
-    assert (tmp_path / 'pkg' / '__init__.py').read_text() == ''
-    assert (tmp_path / 'pkg' / 'module.py').read_text() == 'value = 1\n'
-    assert (tmp_path / 'pkg' / 'data').read_text() == 'payload'
-    assert not (tmp_path / 'bad-name.py').exists()
-    assert runner.invalidated == ['pkg.__init__', 'pkg.module']
+    assert (tmp_path / "pkg" / "__init__.py").read_text() == ""
+    assert (tmp_path / "pkg" / "module.py").read_text() == "value = 1\n"
+    assert (tmp_path / "pkg" / "data").read_text() == "payload"
+    assert not (tmp_path / "bad-name.py").exists()
+    assert runner.invalidated == ["pkg.__init__", "pkg.module"]
 
 
 def test_package_create_decodes_secrets(packages_module, tmp_path):
@@ -337,19 +340,17 @@ def test_package_create_decodes_secrets(packages_module, tmp_path):
     packages.GRPC_RUNNER = runner
 
     packages.package_create(
-        resource('secrets'),
-        'Created',
+        resource("secrets"),
+        "Created",
         tmp_path,
         {
-            'secret_module.py': base64.b64encode(b'print("secret")\n').decode(
-                'utf-8'
-            ),
+            "secret_module.py": base64.b64encode(b'print("secret")\n').decode("utf-8"),
         },
         logger,
     )
 
-    assert (tmp_path / 'secret_module.py').read_bytes() == b'print("secret")\n'
-    assert runner.invalidated == ['secret_module']
+    assert (tmp_path / "secret_module.py").read_bytes() == b'print("secret")\n'
+    assert runner.invalidated == ["secret_module"]
 
 
 def test_package_delete_removes_files_and_empty_directories(
@@ -361,30 +362,30 @@ def test_package_delete_removes_files_and_empty_directories(
     runner = DummyRunner()
 
     packages.GRPC_RUNNER = runner
-    package_dir = tmp_path / 'pkg' / 'sub'
+    package_dir = tmp_path / "pkg" / "sub"
     package_dir.mkdir(parents=True)
-    (package_dir / 'module.py').write_text('value = 1\n')
-    (package_dir / 'data').write_text('payload')
+    (package_dir / "module.py").write_text("value = 1\n")
+    (package_dir / "data").write_text("payload")
 
     packages.package_delete(
-        'Deleted',
+        "Deleted",
         tmp_path,
         {
-            'pkg': {
-                'sub': {
-                    'module.py': 'value = 1\n',
-                    'data': 'payload',
+            "pkg": {
+                "sub": {
+                    "module.py": "value = 1\n",
+                    "data": "payload",
                 },
             },
         },
         logger,
     )
 
-    assert not (package_dir / 'module.py').exists()
-    assert not (package_dir / 'data').exists()
+    assert not (package_dir / "module.py").exists()
+    assert not (package_dir / "data").exists()
     assert not package_dir.exists()
-    assert not (tmp_path / 'pkg').exists()
-    assert runner.invalidated == ['pkg.sub.module', 'pkg.sub', 'pkg']
+    assert not (tmp_path / "pkg").exists()
+    assert runner.invalidated == ["pkg.sub.module", "pkg.sub", "pkg"]
 
 
 @pytest.mark.asyncio
@@ -397,25 +398,25 @@ async def test_create_and_delete_handle_composition_pipeline(
     create_calls = []
     delete_calls = []
     logger = logging.getLogger(__name__)
-    composition_resource = resource('compositions')
-    labels = {'function-pythonic.package': 'pkg'}
+    composition_resource = resource("compositions")
+    labels = {"function-pythonic.package": "pkg"}
     body = {
-        'kind': 'Composition',
-        'spec': {
-            'pipeline': [
+        "kind": "Composition",
+        "spec": {
+            "pipeline": [
                 {
-                    'input': {
-                        'apiVersion': 'pythonic.fn.crossplane.io/v1alpha1',
-                        'packages': {
-                            'module.py': 'value = 1\n',
+                    "input": {
+                        "apiVersion": "pythonic.fn.crossplane.io/v1alpha1",
+                        "packages": {
+                            "module.py": "value = 1\n",
                         },
                     },
                 },
                 {
-                    'input': {
-                        'apiVersion': 'other.example.io/v1alpha1',
-                        'packages': {
-                            'ignored.py': 'value = 2\n',
+                    "input": {
+                        "apiVersion": "other.example.io/v1alpha1",
+                        "packages": {
+                            "ignored.py": "value = 2\n",
                         },
                     },
                 },
@@ -425,17 +426,17 @@ async def test_create_and_delete_handle_composition_pipeline(
 
     monkeypatch.setattr(
         packages,
-        'resource_package_dir',
+        "resource_package_dir",
         lambda resource, labels, logger: tmp_path,
     )
     monkeypatch.setattr(
         packages,
-        'package_create',
+        "package_create",
         lambda *args: create_calls.append(args),
     )
     monkeypatch.setattr(
         packages,
-        'package_delete',
+        "package_delete",
         lambda *args: delete_calls.append(args),
     )
 
@@ -445,14 +446,14 @@ async def test_create_and_delete_handle_composition_pipeline(
     assert create_calls == [
         (
             composition_resource,
-            'Created',
+            "Created",
             tmp_path,
-            {'module.py': 'value = 1\n'},
+            {"module.py": "value = 1\n"},
             logger,
         ),
     ]
     assert delete_calls == [
-        ('Deleted', tmp_path, {'module.py': 'value = 1\n'}, logger),
+        ("Deleted", tmp_path, {"module.py": "value = 1\n"}, logger),
     ]
 
 
@@ -461,19 +462,19 @@ async def test_update_deletes_old_before_creating_new(packages_module, monkeypat
     packages, _ = packages_module
     calls = []
     logger = logging.getLogger(__name__)
-    configmaps_resource = resource('configmaps')
-    labels = {'function-pythonic.package': 'pkg'}
-    body = {'kind': 'ConfigMap'}
-    old = {'kind': 'ConfigMap'}
+    configmaps_resource = resource("configmaps")
+    labels = {"function-pythonic.package": "pkg"}
+    body = {"kind": "ConfigMap"}
+    old = {"kind": "ConfigMap"}
 
     def resource_delete(resource, labels, action, value, logger):
-        calls.append(('delete', resource, labels, value, action, logger))
+        calls.append(("delete", resource, labels, value, action, logger))
 
     def resource_create(resource, labels, action, value, logger):
-        calls.append(('create', resource, labels, value, action, logger))
+        calls.append(("create", resource, labels, value, action, logger))
 
-    monkeypatch.setattr(packages, 'resource_delete', resource_delete)
-    monkeypatch.setattr(packages, 'resource_create', resource_create)
+    monkeypatch.setattr(packages, "resource_delete", resource_delete)
+    monkeypatch.setattr(packages, "resource_create", resource_create)
 
     await packages.update(
         resource=configmaps_resource,
@@ -484,6 +485,6 @@ async def test_update_deletes_old_before_creating_new(packages_module, monkeypat
     )
 
     assert calls == [
-        ('delete', configmaps_resource, labels, old, 'Removed', logger),
-        ('create', configmaps_resource, labels, body, 'Added', logger),
+        ("delete", configmaps_resource, labels, old, "Removed", logger),
+        ("create", configmaps_resource, labels, body, "Added", logger),
     ]

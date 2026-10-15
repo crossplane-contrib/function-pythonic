@@ -1,5 +1,5 @@
-
 import datetime
+
 from google.protobuf.duration_pb2 import Duration
 
 from . import (
@@ -8,7 +8,6 @@ from . import (
 )
 from .proto.v1 import run_function_pb2 as fnv1
 
-
 _notset = object()
 
 
@@ -16,7 +15,7 @@ class ConnectionSecret:
     def __get__(self, composite, objtype=None):
         if composite.crossplane_v1:
             return composite.spec.writeConnectionSecretToRef
-        secret = getattr(composite, '_connectionSecret', None)
+        secret = getattr(composite, "_connectionSecret", None)
         if not secret:
             secret = protobuf.Map()
             for key, value in composite.request.input.writeConnectionSecretToRef:
@@ -27,7 +26,9 @@ class ConnectionSecret:
     def __set__(self, composite, values):
         if composite.crossplane_v1:
             if values != composite.spec.writeConnectionSecretToRef:
-                raise NotImplementedError('Connection Secret cannot be set in Crossplane V1')
+                raise NotImplementedError(
+                    "Connection Secret cannot be set in Crossplane V1"
+                )
             return
         secret = protobuf.Map()
         for key, value in values:
@@ -37,7 +38,7 @@ class ConnectionSecret:
 
 class Connection:
     def __get__(self, composite, objtype=None):
-        connection = getattr(composite, '_connection', None)
+        connection = getattr(composite, "_connection", None)
         if not connection:
             connection = _Connection(composite)
             composite._connection = connection
@@ -53,7 +54,9 @@ class Connection:
 class TTL:
     def __get__(self, composite, objtype=None):
         if composite.response.meta.ttl.nanos:
-            return float(composite.response.meta.ttl.seconds) + (float(composite.response.meta.ttl.nanos) / 1000000000.0)
+            return float(composite.response.meta.ttl.seconds) + (
+                float(composite.response.meta.ttl.nanos) / 1000000000.0
+            )
         return int(composite.response.meta.ttl.seconds)
 
     def __set__(self, composite, ttl):
@@ -65,14 +68,16 @@ class TTL:
             if ttl.is_integer():
                 composite.response.meta.ttl.nanos = 0
             else:
-                composite.response.meta.ttl.nanos = int((ttl - int(composite.response.meta.ttl.seconds)) * 1000000000)
+                composite.response.meta.ttl.nanos = int(
+                    (ttl - int(composite.response.meta.ttl.seconds)) * 1000000000
+                )
         else:
-            raise ValueError('ttl must be an int or float')
+            raise TypeError("ttl must be an int or float")
 
 
 class Ready:
     def __get__(self, composite, objtype=None):
-        if hasattr(composite, '_ready'):
+        if hasattr(composite, "_ready"):
             return composite._ready
         if composite.desired._parent.ready == fnv1.Ready.READY_TRUE:
             return True
@@ -93,7 +98,9 @@ class Ready:
 class BaseComposite:
     def __init__(self, crossplane_v1, request, logger):
         self.crossplane_v1 = crossplane_v1
-        self.request = protobuf.Message(None, 'request', request.DESCRIPTOR, request, 'Function Request')
+        self.request = protobuf.Message(
+            None, "request", request.DESCRIPTOR, request, "Function Request"
+        )
         response = fnv1.RunFunctionResponse(
             meta=fnv1.ResponseMeta(
                 tag=request.meta.tag,
@@ -104,15 +111,17 @@ class BaseComposite:
             desired=request.desired,
             context=request.context,
         )
-        self.response = protobuf.Message(None, 'response', response.DESCRIPTOR, response)
+        self.response = protobuf.Message(
+            None, "response", response.DESCRIPTOR, response
+        )
         self.logger = logger
         self.capabilities = Capabilities(self.request.meta.capabilities)
         self.parameters = self.request.input.parameters
         self.credentials = Credentials(self.request)
         self.context = self.response.context
-        self.environment = self.context['apiextensions.crossplane.io/environment']
+        self.environment = self.context["apiextensions.crossplane.io/environment"]
         self.requireds = Requireds(self)
-        self.watched = self.requireds['ops.crossplane.io/watched-resource'][0]
+        self.watched = self.requireds["ops.crossplane.io/watched-resource"][0]
         self.schemas = Schemas(self)
         self.resources = Resources(self)
         self.autoReady = True
@@ -131,7 +140,7 @@ class BaseComposite:
         self.output = self.response.output
         self.conditions = Conditions(observed, self.response)
         self.results = Results(self.response)
-        self.events = Results(self.response) # Deprecated, use self.results
+        self.events = Results(self.response)  # Deprecated, use self.results
 
     ttl = TTL()
     connectionSecret = ConnectionSecret()
@@ -151,7 +160,9 @@ class Capabilities:
 
     @property
     def requireds(self):
-        return fnv1.CAPABILITY_REQUIRED_RESOURCES in self._capabilities if self else None
+        return (
+            fnv1.CAPABILITY_REQUIRED_RESOURCES in self._capabilities if self else None
+        )
 
     @property
     def credentials(self):
@@ -168,7 +179,7 @@ class Capabilities:
 
 class Credentials:
     def __init__(self, request):
-        self.__dict__['_request'] = request
+        self.__dict__["_request"] = request
 
     def __getattr__(self, key):
         return self[key]
@@ -192,7 +203,7 @@ class Credentials:
 
 class Credential:
     def __init__(self, credential):
-        self.__dict__['_credential'] = credential
+        self.__dict__["_credential"] = credential
 
     def __getattr__(self, key):
         return self[key]
@@ -216,8 +227,8 @@ class Credential:
 
 class Resources:
     def __init__(self, composite):
-        self.__dict__['_composite'] = composite
-        self.__dict__['_cache'] = {}
+        self.__dict__["_composite"] = composite
+        self.__dict__["_cache"] = {}
 
     def __getattr__(self, key):
         return self[key]
@@ -272,11 +283,13 @@ class Resource:
         self.usages = None
         self.unknownsFatal = None
 
-    def __call__(self, kind=_notset, apiVersion=_notset, namespace=_notset, name=_notset):
+    def __call__(
+        self, kind=_notset, apiVersion=_notset, namespace=_notset, name=_notset
+    ):
         self.desired()
         if kind != _notset:
             # Allow for apiVersion in the first arg and kind in the second arg
-            if '/' in kind or kind == 'v1':
+            if "/" in kind or kind == "v1":
                 if apiVersion != _notset:
                     self.kind = apiVersion
                 apiVersion = kind
@@ -308,16 +321,16 @@ class Resource:
 
     @property
     def externalName(self):
-        name = self.metadata.annotations['crossplane.io/external-name']
+        name = self.metadata.annotations["crossplane.io/external-name"]
         if not name:
-            name = self.observed.metadata.annotations['crossplane.io/external-name']
+            name = self.observed.metadata.annotations["crossplane.io/external-name"]
             if name:
                 self.externalName = name
         return name
 
     @externalName.setter
     def externalName(self, name):
-        self.metadata.annotations['crossplane.io/external-name'] = name
+        self.metadata.annotations["crossplane.io/external-name"] = name
 
     @property
     def metadata(self):
@@ -358,14 +371,16 @@ class Resource:
 
     @property
     def ready(self):
-        if not hasattr(self, '_ready'):
+        if not hasattr(self, "_ready"):
             if self.desired._parent.ready == fnv1.Ready.READY_TRUE:
-                self._ready =  True
+                self._ready = True
             elif self.desired._parent.ready == fnv1.Ready.READY_FALSE:
                 self._ready = False
             else:
                 self._ready = None
-                if self.autoReady or (self.autoReady is None and self._composite.autoReady):
+                if self.autoReady or (
+                    self.autoReady is None and self._composite.autoReady
+                ):
                     ready = auto_ready.resource_ready(self)
                     if ready:
                         self._ready = ready
@@ -382,7 +397,7 @@ class Resource:
         else:
             self.desired._parent.ready = fnv1.Ready.READY_FALSE
 
-    def setReadyCondition(self, type='Ready'):
+    def setReadyCondition(self, type="Ready"):
         condition = self.conditions[type]
         if condition.status:
             self.ready = self.observed.metadata.name
@@ -412,6 +427,7 @@ class Resource:
                 else:
                     field = resource.status.notReady
         self.metadata.annotations[f"pythonic.dependency/{resource.name}"] = field
+
 
 class Requireds:
     def __init__(self, composite):
@@ -485,11 +501,18 @@ class RequiredResources:
             self._resources = composite.request.required_resources[name]
         self._cache = {}
 
-    def __call__(self, kind=_notset, apiVersion=_notset, namespace=_notset, name=_notset, labels=_notset):
+    def __call__(
+        self,
+        kind=_notset,
+        apiVersion=_notset,
+        namespace=_notset,
+        name=_notset,
+        labels=_notset,
+    ):
         self._selector()
         if kind != _notset:
             # Allow for apiVersion in the first arg and kind in the second arg
-            if '/' in kind or kind == 'v1':
+            if "/" in kind or kind == "v1":
                 if apiVersion != _notset:
                     self.kind = apiVersion
                 apiVersion = kind
@@ -617,9 +640,7 @@ class Schemas:
     def __contains__(self, key):
         if key in self._composite.request.required_schemas:
             return True
-        if key in self._composite.response.requirements.schemas:
-            return True
-        return False
+        return key in self._composite.response.requirements.schemas
 
     def __iter__(self):
         names = set()
@@ -641,7 +662,7 @@ class Schema:
         self._selector()
         if kind != _notset:
             # Allow for apiVersion in the first arg and kind in the second arg
-            if '/' in kind or kind == 'v1':
+            if "/" in kind or kind == "v1":
                 if apiVersion != _notset:
                     self.kind = apiVersion
                 apiVersion = kind
@@ -695,22 +716,21 @@ class Schema:
         return item in self._schema
 
     def __iter__(self):
-        for key, value in self._schema:
-            yield key, value
+        yield from self._schema
 
     def __hash__(self):
         return hash(self._schema)
 
     def __eq__(self, other):
-        if instance(other, Schema):
+        if isinstance(other, Schema):
             other = other._schema
         return self._schema == other
 
     def __str__(self):
         return str(self._schema)
 
-    def __format__(self, spec='yaml'):
-        return format(self,_schema, spec)
+    def __format__(self, spec="yaml"):
+        return format(self._schema, spec)
 
 
 class Conditions:
@@ -725,12 +745,9 @@ class Conditions:
         return Condition(self, type)
 
     def __bool__(self):
-        if self._response is not None:
-            if self._response.conditions:
-                return True
-        if self._observed.resource.status.conditions:
+        if self._response is not None and self._response.conditions:
             return True
-        return False
+        return bool(self._observed.resource.status.conditions)
 
     def __len__(self):
         return len(self._types())
@@ -760,14 +777,14 @@ class Condition(protobuf.ProtobufValue):
     def _protobuf_value(self):
         status = self.status
         value = {
-            'type': self.type,
-            'status': 'Unknown' if status is None else str(status),
-            'reason': self.reason or '',
-            'message': self.message or '',
+            "type": self.type,
+            "status": "Unknown" if status is None else str(status),
+            "reason": self.reason or "",
+            "message": self.message or "",
         }
         time = self.lastTransitionTime
         if time:
-            value['lastTransitionTime'] = time.isoformat().replace('+00:00', 'Z')
+            value["lastTransitionTime"] = time.isoformat().replace("+00:00", "Z")
         return value
 
     def __call__(self, reason=_notset, message=_notset, status=_notset, claim=_notset):
@@ -786,9 +803,9 @@ class Condition(protobuf.ProtobufValue):
     def status(self):
         condition = self._find_condition()
         if condition:
-            if condition.status in (fnv1.Status.STATUS_CONDITION_TRUE, 'True', True):
+            if condition.status in (fnv1.Status.STATUS_CONDITION_TRUE, "True", True):
                 return True
-            if condition.status in (fnv1.Status.STATUS_CONDITION_FALSE, 'False', False):
+            if condition.status in (fnv1.Status.STATUS_CONDITION_FALSE, "False", False):
                 return False
         return None
 
@@ -803,7 +820,6 @@ class Condition(protobuf.ProtobufValue):
             condition.status = fnv1.Status.STATUS_CONDITION_UNSPECIFIED
         else:
             condition.status = fnv1.Status.STATUS_CONDITION_FALSE
-
 
     @property
     def reason(self):
@@ -862,7 +878,7 @@ class Condition(protobuf.ProtobufValue):
                     return observed
             return None
         if self._conditions._response is None:
-            raise ValueError('Condition is read only')
+            raise ValueError("Condition is read only")
         condition = fnv1.Condition()
         condition.type = self.type
         return self._conditions._response.conditions.append(condition)
@@ -984,14 +1000,18 @@ class Result:
 
     @property
     def claim(self):
-        return bool(self) and self._result.target == fnv1.Target.TARGET_COMPOSITE_AND_CLAIM
+        return (
+            bool(self) and self._result.target == fnv1.Target.TARGET_COMPOSITE_AND_CLAIM
+        )
 
     @claim.setter
     def claim(self, claim):
         if bool(self):
             if claim:
                 self._result.target = fnv1.Target.TARGET_COMPOSITE_AND_CLAIM
-            elif claim == None or (isinstance(claim, protobuf.Value) and claim._isUnknown):
+            elif claim == None or (
+                isinstance(claim, protobuf.Value) and claim._isUnknown
+            ):
                 self._result.target = fnv1.Target.TARGET_UNSPECIFIED
             else:
                 self._result.target = fnv1.Target.TARGET_COMPOSITE
@@ -999,14 +1019,14 @@ class Result:
 
 class _Connection:
     def __init__(self, composite):
-        self._set_attribute('_composite', composite)
+        self._set_attribute("_composite", composite)
 
     def _set_attribute(self, key, value):
         self.__dict__[key] = value
 
     @property
     def _resource_name(self):
-        return self._composite.connectionSecret.resourceName or 'connection-secret'
+        return self._composite.connectionSecret.resourceName or "connection-secret"
 
     @property
     def observed(self):
@@ -1028,14 +1048,15 @@ class _Connection:
         return key in self._composite.response.desired.composite.connection_details
 
     def __iter__(self):
-        for key, value in self._composite.response.desired.composite.connection_details:
-            yield key, value
+        yield from self._composite.response.desired.composite.connection_details
 
     def __str__(self):
         return format(self)
 
-    def __format__(self, spec='yaml'):
-        return format(self._composite.response.desired.composite.connection_details, spec)
+    def __format__(self, spec="yaml"):
+        return format(
+            self._composite.response.desired.composite.connection_details, spec
+        )
 
     def __call__(self, **kwargs):
         self._composite.response.desired.composite.connection_details(**kwargs)
@@ -1052,9 +1073,8 @@ class _Connection:
         if not isinstance(value, str):
             if value is None:
                 return
-            if isinstance(value, (protobuf.FieldMessage, protobuf.Value)):
-                if not value:
-                    return
+            if isinstance(value, (protobuf.FieldMessage, protobuf.Value)) and not value:
+                return
             value = str(value)
         self._composite.response.desired.composite.connection_details[key] = value
         if self._composite.crossplane_v1 or not self._composite.connectionSecret.name:
@@ -1062,15 +1082,20 @@ class _Connection:
         if self._resource_name in self._composite.resources:
             secret = self._composite.resources[self._resource_name]
         else:
-            secret = self._composite.resources[self._resource_name]('v1', 'Secret')
-            if self._composite.connectionSecret.name and len(self._composite.connectionSecret.name):
+            secret = self._composite.resources[self._resource_name]("v1", "Secret")
+            if self._composite.connectionSecret.name and len(
+                self._composite.connectionSecret.name
+            ):
                 secret.metadata.name = self._composite.connectionSecret.name
             if not self._composite.metadata.namespace:
                 if not self._composite.connectionSecret.namespace:
-                    self._composite.results.fatal('ConnectionNoNamespace', 'Cluster scoped XR must specify connection secret namespace')
+                    self._composite.results.fatal(
+                        "ConnectionNoNamespace",
+                        "Cluster scoped XR must specify connection secret namespace",
+                    )
                     return
                 secret.metadata.namespace = self._composite.connectionSecret.namespace
-            secret.type = 'connection.crossplane.io/v1alpha1'
+            secret.type = "connection.crossplane.io/v1alpha1"
         secret.data[key] = protobuf.B64Encode(value)
 
     def __delattr__(self, key):
