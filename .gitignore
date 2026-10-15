@@ -1,4 +1,3 @@
-src/crossplane/pythonic/__version__.py
 src/crossplane/pythonic/proto/v1/run_function_pb2*
 tests/protobuf/pytest_pb2*
 

@@ -38,7 +38,7 @@ env:
   XPKG_VERSION: ${{ inputs.version }}
 
 jobs:
-  ruff-format:
+  code-format:
     runs-on: ubuntu-26.04
     steps:
     - name: Checkout
@@ -48,7 +48,7 @@ jobs:
     - name: Ruff Format
       run: uv run ruff format --diff
 
-  ruff-check:
+  code-check:
     runs-on: ubuntu-26.04
     steps:
     - name: Checkout
@@ -100,14 +100,14 @@ jobs:
   # artifacts and pushes them as a single multi-platform package. 
   build-xpkg:
     needs:
-      - build-pypi
+    - build-pypi
     runs-on: ubuntu-26.04
     strategy:
       fail-fast: true
       matrix:
         arch:
-          - amd64
-          - arm64
+        - amd64
+        - arm64
     steps:
     - name: Setup QEMU
       uses: docker/setup-qemu-action@v4
@@ -157,27 +157,6 @@ jobs:
         if-no-files-found: error
         retention-days: 1
 
-  publish-pypi:
-    # Don't publish unless we were run with an explicit version.
-    if: ${{ inputs.version != '' }}
-    needs:
-      - build-xpkg # only publish if xpkg builds succeeds
-    runs-on: ubuntu-26.04
-    steps:
-    - name: Download Sdist and Wheel from GitHub
-      uses: actions/download-artifact@v8
-      with:
-        name: dist
-        path: dist
-
-    - name: Install uv
-      uses: astral-sh/setup-uv@v10.3.0
-
-    - name: Publish to PyPI
-      env:
-        UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-      run: uv publish
-
   # This job downloads the single-platform packages built by the build job, and
   # pushes them as a multi-platform package. We only push the package it the
   # XPKG_ACCESS_ID and XPKG_TOKEN secrets were provided.
@@ -185,7 +164,10 @@ jobs:
     # Don't publish unless the main branch or we were run with an explicit version
     if: ${{ github.ref == 'refs/heads/main' || inputs.version != '' }}
     needs:
-      - build-xpkg
+    - code-format
+    - code-check
+    - test
+    - build-xpkg
     runs-on: ubuntu-26.04
     permissions:
       contents: read
@@ -230,3 +212,28 @@ jobs:
 
     - name: Push Multi-Platform Package to GHCR
       run: "bin/crossplane --verbose xpkg push --package-files $(echo *.xpkg|tr ' ' ,) ${{ env.CROSSPLANE_REGORG }}:${{ env.XPKG_VERSION }}"
+
+  publish-pypi:
+    # Don't publish unless we were run with an explicit version.
+    if: ${{ inputs.version != '' }}
+    needs:
+    - code-format
+    - code-check
+    - test
+    - build-pypi
+    - push-xpkg # Only publish package if there is an associated container image
+    runs-on: ubuntu-26.04
+    steps:
+    - name: Download Sdist and Wheel from GitHub
+      uses: actions/download-artifact@v8
+      with:
+        name: dist
+        path: dist
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v10.3.0
+
+    - name: Publish to PyPI
+      env:
+        UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+      run: uv publish

@@ -6,7 +6,7 @@ from . import (
 
 class Command(command.Command):
     name = "version"
-    help = "Print the function-oythonic version"
+    help = "Print the function-pythonic version"
 
     async def run(self):
         print(__about__.__version__)
