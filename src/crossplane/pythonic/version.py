@@ -1,4 +1,3 @@
-
 from . import (
     __about__,
     command,
@@ -6,8 +5,8 @@ from . import (
 
 
 class Command(command.Command):
-    name = 'version'
-    help = 'Print the function-oythonic version'
+    name = "version"
+    help = "Print the function-oythonic version"
 
     async def run(self):
         print(__about__.__version__)

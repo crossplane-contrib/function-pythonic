@@ -186,7 +186,7 @@ message contents. For example, the following examples obtain the same value
 from the RunFunctionRequest message:
 ```python
 region = request.observed.composite.resource.spec.region
-region = request['observed']['composite']['resource']['spec']['region']
+region = request["observed"]["composite"]["resource"]["spec"]["region"]
 ```
 Getting values from free form map and list values will not throw
 errors for keys that do not exist, but will return an unknown placeholder
@@ -205,13 +205,15 @@ When setting fields, all intermediary unknown placeholders will automatically
 be created. For example, this will create all items needed to set the
 region on the desired resource:
 ```python
-response.desired.resources.vpc.resource.spec.forProvider.region = 'us-east-1'
+response.desired.resources.vpc.resource.spec.forProvider.region = "us-east-1"
 ```
 Calling a message or map will clear it and will set any provided key word
 arguments. For example, this will either create or clear the resource
 and then set its apiVersion and kind:
 ```python
-response.desired.resources.vpc.resource(kind='VPC', apiVersion='ec2.aws.crossplane.io/v1beta1')
+response.desired.resources.vpc.resource(
+    kind="VPC", apiVersion="ec2.aws.crossplane.io/v1beta1"
+)
 ```
 The following functions are provided to create Protobuf structures:
 | Function | Description |
@@ -230,12 +232,12 @@ The following items are supported in all the Protobuf Message wrapper classes: `
 
 To convert a Protobuf message to a string value, use either `str` or `format`.
 ```python
-yaml  = str(request)                # get the request as yaml
-yaml  = format(request)             # also get the request as yaml
-yaml  = format(request, 'yaml')     # yet another get the request as yaml
-json  = format(request, 'json')     # get the request as json
-json  = format(request, 'jsonc')    # get the request as json compact
-proto = format(request, 'protobuf') # get the request as a protobuf string
+yaml = str(request)  # get the request as yaml
+yaml = format(request)  # also get the request as yaml
+yaml = format(request, "yaml")  # yet another get the request as yaml
+json = format(request, "json")  # get the request as json
+json = format(request, "jsonc")  # get the request as json compact
+proto = format(request, "protobuf")  # get the request as a protobuf string
 ```
 ## Composite Composition
 

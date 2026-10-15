@@ -1,13 +1,13 @@
-
 import asyncio
 import importlib
-import inflect
 import inspect
 import json
-import kr8s
 import logging
 import pathlib
 import sys
+
+import inflect
+import kr8s
 import yaml
 
 from . import (
@@ -18,93 +18,99 @@ from . import (
 from .composite import BaseComposite
 from .proto.v1 import run_function_pb2 as fnv1
 
-
 INFLECT = inflect.engine()
 INFLECT.classical(all=False)
 
 
 class Command(command.Command):
-    name = 'render'
-    help = 'Render a function-pythonic Composition'
+    name = "render"
+    help = "Render a function-pythonic Composition"
 
     @classmethod
     def add_parser_arguments(cls, parser):
         cls.add_function_arguments(parser)
         parser.add_argument(
-            'composite',
+            "composite",
             type=pathlib.Path,
-            metavar='COMPOSITE',
-            help='A YAML file containing the Composite resource to render, or kind:apiVersion:namespace:name of cluster Composite.',
+            metavar="COMPOSITE",
+            help="A YAML file containing the Composite resource to render, or kind:apiVersion:namespace:name of cluster Composite.",
         )
         parser.add_argument(
-            'composition',
+            "composition",
             type=pathlib.Path,
-            nargs='?',
-            metavar='COMPOSITION',
-            help='A YAML file containing the Composition resource, or the complete path of a function-pythonic BaseComposite subclass.',
+            nargs="?",
+            metavar="COMPOSITION",
+            help="A YAML file containing the Composition resource, or the complete path of a function-pythonic BaseComposite subclass.",
         )
         parser.add_argument(
-            '--kube-context', '-k',
-            metavar='CONTEXT',
-            help='The kubectl context to use to obtain external resources from, such as required resources, connections, etc.'
+            "--kube-context",
+            "-k",
+            metavar="CONTEXT",
+            help="The kubectl context to use to obtain external resources from, such as required resources, connections, etc.",
         )
         parser.add_argument(
-            '--context-files',
-            action='append',
+            "--context-files",
+            action="append",
             default=[],
-            metavar='KEY=PATH',
-            help='Context key-value pairs to pass to the Function pipeline. Values must be files containing YAML/JSON.',
+            metavar="KEY=PATH",
+            help="Context key-value pairs to pass to the Function pipeline. Values must be files containing YAML/JSON.",
         )
         parser.add_argument(
-            '--context-values',
-            action='append',
+            "--context-values",
+            action="append",
             default=[],
-            metavar='KEY=VALUE',
-            help='Context key-value pairs to pass to the Function pipeline. Values must be YAML/JSON. Keys take precedence over --context-files.',
+            metavar="KEY=VALUE",
+            help="Context key-value pairs to pass to the Function pipeline. Values must be YAML/JSON. Keys take precedence over --context-files.",
         )
         parser.add_argument(
-            '--observed-resources', '-o',
-            action='append',
-            type=pathlib.Path,
-            default=[],
-            metavar='PATH',
-            help='A YAML file or directory of YAML files specifying the observed state of composed resources.'
-        )
-        parser.add_argument(
-            '--required-resources', '-e',
-            action='append',
+            "--observed-resources",
+            "-o",
+            action="append",
             type=pathlib.Path,
             default=[],
-            metavar='PATH',
-            help='A YAML file or directory of YAML files specifying required resources to pass to the Function pipeline.',
+            metavar="PATH",
+            help="A YAML file or directory of YAML files specifying the observed state of composed resources.",
         )
         parser.add_argument(
-            '--required-schemas', '-s',
-            action='append',
+            "--required-resources",
+            "-e",
+            action="append",
             type=pathlib.Path,
             default=[],
-            metavar='PATH',
-            help='A JSON file or directory of JSON files specifying required schemas to pass to the Function pipeline.',
+            metavar="PATH",
+            help="A YAML file or directory of YAML files specifying required resources to pass to the Function pipeline.",
         )
         parser.add_argument(
-            '--include-full-xr', '-x',
-            action='store_true',
+            "--required-schemas",
+            "-s",
+            action="append",
+            type=pathlib.Path,
+            default=[],
+            metavar="PATH",
+            help="A JSON file or directory of JSON files specifying required schemas to pass to the Function pipeline.",
+        )
+        parser.add_argument(
+            "--include-full-xr",
+            "-x",
+            action="store_true",
             help="Include a direct copy of the input XR's spedc and metadata fields in the rendered output.",
         )
         parser.add_argument(
-            '--include-connection-xr',
-            action='store_true',
+            "--include-connection-xr",
+            action="store_true",
             help="Include the Composite connection values in the rendered output as a resource of kind: Connection.",
         )
         parser.add_argument(
-            '--include-function-results', '-r',
-            action='store_true',
-            help='Include informational and warning messages from Functions in the rendered output as resources of kind: Result.',
+            "--include-function-results",
+            "-r",
+            action="store_true",
+            help="Include informational and warning messages from Functions in the rendered output as resources of kind: Result.",
         )
         parser.add_argument(
-            '--include-context', '-c',
-            action='store_true',
-            help='Include the context in the rendered output as a resource of kind: Context.',
+            "--include-context",
+            "-c",
+            action="store_true",
+            help="Include the context in the rendered output as a resource of kind: Context.",
         )
 
     def initialize(self):
@@ -124,7 +130,17 @@ class Command(command.Command):
         schemas = self.collect_schemas(self.args.required_schemas)
         context = self.setup_context()
 
-        render = await self.render(composite, observed, composition, resources, schemas, context, api, self.args.render_unknowns, self.args.crossplane_v1)
+        render = await self.render(
+            composite,
+            observed,
+            composition,
+            resources,
+            schemas,
+            context,
+            api,
+            self.args.render_unknowns,
+            self.args.crossplane_v1,
+        )
         if not render:
             sys.exit(1)
 
@@ -139,34 +155,39 @@ class Command(command.Command):
             render.composite.metadata.name = composite.metadata.name
 
         # Print the composite.
-        print('---')
-        print(str(render.composite), end='')
+        print("---")
+        print(str(render.composite), end="")
         # Print Composite connection if requested.
         if self.args.include_connection_xr:
-            print('---')
-            print(str(render.connection), end='')
+            print("---")
+            print(str(render.connection), end="")
         # Print the composed resources.
-        for resource in sorted(render.resources, key=lambda resource: str(resource.metadata.annotations['crossplane.io/composition-resource-name'])):
-            print('---')
-            print(str(resource), end='')
+        for resource in sorted(
+            render.resources,
+            key=lambda resource: str(
+                resource.metadata.annotations["crossplane.io/composition-resource-name"]
+            ),
+        ):
+            print("---")
+            print(str(resource), end="")
         # Print the results (AKA events) if requested.
         if self.args.include_function_results:
             for result in render.results:
-                print('---')
-                print(str(result), end='')
+                print("---")
+                print(str(result), end="")
         # Print the final context if requested.
         if self.args.include_context:
-            print('---')
-            print(str(render.context), end='')
+            print("---")
+            print(str(render.context), end="")
 
     async def setup_composite(self, api=None):
         # Obtain the Composite to render.
         if self.args.composite.is_file():
             return protobuf.Yaml(self.args.composite.read_text())
         if not api:
-            print(f"Composite \"{self.args.composite}\" is not a file", file=sys.stderr)
+            print(f'Composite "{self.args.composite}" is not a file', file=sys.stderr)
             sys.exit(1)
-        composite = str(self.args.composite).split(':')
+        composite = str(self.args.composite).split(":")
         if len(composite) == 3:
             namespace = None
         elif len(composite) == 4:
@@ -175,11 +196,16 @@ class Command(command.Command):
             else:
                 namespace = None
         else:
-            print(f"Composite \"{self.args.composite}\" is not kind:apiVersion:namespace:name", file=sys.stderr)
+            print(
+                f'Composite "{self.args.composite}" is not kind:apiVersion:namespace:name',
+                file=sys.stderr,
+            )
             sys.exit(1)
-        composite = await self.kr8s_get(api, composite[0], composite[1], namespace, composite[-1])
+        composite = await self.kr8s_get(
+            api, composite[0], composite[1], namespace, composite[-1]
+        )
         if not composite:
-            print(f"Composite \"{self.args.composite}\" not found", file=sys.stderr)
+            print(f'Composite "{self.args.composite}" not found', file=sys.stderr)
             sys.exit(1)
         return composite
 
@@ -189,47 +215,67 @@ class Command(command.Command):
             return None
         if self.args.composition.is_file():
             composition = self.args.composition.read_text()
-            if self.args.composition.suffix == '.py':
-                return self.create_composition(compsite, composition)
+            if self.args.composition.suffix == ".py":
+                return self.create_composition(composite, composition)
             composition = protobuf.Yaml(composition)
             if not len(composition.spec.pipeline):
-                print(f"Composition file does not contain any pipeline steps: {self.args.composition}", file=sys.stderr)
+                print(
+                    f"Composition file does not contain any pipeline steps: {self.args.composition}",
+                    file=sys.stderr,
+                )
                 sys.exit(1)
             return composition
-        composition = str(self.args.composition).rsplit('.', 1)
+        composition = str(self.args.composition).rsplit(".", 1)
         if len(composition) == 1:
-            print(f"Composition class name does not include module: {self.args.composition}", file=sys.stderr)
+            print(
+                f"Composition class name does not include module: {self.args.composition}",
+                file=sys.stderr,
+            )
             sys.exit(1)
         try:
             module = importlib.import_module(composition[0])
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(e)
-            print(f"Unable to import composition module: {composition[0]}", file=sys.stderr)
+            print(
+                f"Unable to import composition module: {composition[0]}",
+                file=sys.stderr,
+            )
             sys.exit(1)
         clazz = getattr(module, composition[1], None)
         if not clazz:
-            print(f"Composition class {composition[0]} does not define: {composition[1]}", file=sys.stderr)
+            print(
+                f"Composition class {composition[0]} does not define: {composition[1]}",
+                file=sys.stderr,
+            )
             sys.exit(1)
         if not inspect.isclass(clazz):
-            print(f"Composition class {self.args.composition} is not a class", file=sys.stderr)
+            print(
+                f"Composition class {self.args.composition} is not a class",
+                file=sys.stderr,
+            )
             sys.exit(1)
         if not issubclass(clazz, BaseComposite):
-            print(f"Composition class {self.args.composition} is not a subclass of BaseComposite", file=sys.stderr)
+            print(
+                f"Composition class {self.args.composition} is not a subclass of BaseComposite",
+                file=sys.stderr,
+            )
             sys.exit(1)
         return self.create_composition(composite, self.args.composition)
 
-    def create_composition(self, composite, module=''):
+    def create_composition(self, composite, module=""):
         composition = protobuf.Map()
-        composition.apiVersion = 'apiextensions.crossplane.io/v1'
-        composition.kind = 'Composition'
-        composition.metadata.name = 'function-pythonic-render'
+        composition.apiVersion = "apiextensions.crossplane.io/v1"
+        composition.kind = "Composition"
+        composition.metadata.name = "function-pythonic-render"
         composition.spec.compositeTypeRef.apiVersion = composite.apiVersion
         composition.spec.compositeTypeRef.kind = composite.kind
-        composition.spec.mode = 'Pipeline'
-        composition.spec.pipeline[0].step = 'function-pythonic-render'
-        composition.spec.pipeline[0].functionRef.name = 'function-pythonic'
-        composition.spec.pipeline[0].input.apiVersion = 'pythonic.fn.crossplane.io/v1alpha1'
-        composition.spec.pipeline[0].input.kind = 'Composite'
+        composition.spec.mode = "Pipeline"
+        composition.spec.pipeline[0].step = "function-pythonic-render"
+        composition.spec.pipeline[0].functionRef.name = "function-pythonic"
+        composition.spec.pipeline[
+            0
+        ].input.apiVersion = "pythonic.fn.crossplane.io/v1alpha1"
+        composition.spec.pipeline[0].input.kind = "Composite"
         composition.spec.pipeline[0].input.composite = str(module)
         return composition
 
@@ -241,11 +287,14 @@ class Command(command.Command):
                     resources.append(protobuf.Value(None, None, document))
             elif entry.is_dir():
                 for file in entry.iterdir():
-                    if file.suffix in ('.yaml', '.yml'):
+                    if file.suffix in (".yaml", ".yml"):
                         for document in yaml.safe_load_all(file.read_text()):
                             resources.append(protobuf.Value(None, None, document))
             else:
-                print(f"Specified resource is not a file or a directory: {entry}", file=sys.stderr)
+                print(
+                    f"Specified resource is not a file or a directory: {entry}",
+                    file=sys.stderr,
+                )
                 sys.exit(1)
         resources.sort(key=lambda resource: str(resource.metadata.name))
         return resources
@@ -258,11 +307,14 @@ class Command(command.Command):
                 schemas.append(protobuf.Value(None, None, document))
             elif entry.is_dir():
                 for file in entry.iterdir():
-                    if file.suffix == '.json':
+                    if file.suffix == ".json":
                         document = json.loads(file.read_text())
                         schemas.append(protobuf.Value(None, None, document))
             else:
-                print(f"Specified resource is not a file or a directory: {entry}", file=sys.stderr)
+                print(
+                    f"Specified resource is not a file or a directory: {entry}",
+                    file=sys.stderr,
+                )
                 sys.exit(1)
         return schemas
 
@@ -270,7 +322,7 @@ class Command(command.Command):
         # Load the request context with any specified command line options.
         context = protobuf.Map()
         for entry in self.args.context_files:
-            key_path = entry.split('=', 1)
+            key_path = entry.split("=", 1)
             if len(key_path) != 2:
                 print(f"Invalid --context-files: {entry}", file=sys.stderr)
                 sys.exit(1)
@@ -280,16 +332,39 @@ class Command(command.Command):
                 sys.exit(1)
             context[key_path[0]] = protobuf.Yaml(path.read_text())
         for entry in self.args.context_values:
-            key_value = entry.split('=', 1)
+            key_value = entry.split("=", 1)
             if len(key_value) != 2:
                 print(f"Invalid --context-values: {entry}", file=sys.stderr)
                 sys.exit(1)
             context[key_value[0]] = protobuf.Yaml(key_value[1])
         return context
 
-    async def render(self, composite, observed=[], composition=None, resources=[], schemas=[], context=None, api=None, render_unknowns=False, crossplane_v1=False, composite_observeds=False):
+    async def render(
+        self,
+        composite,
+        observed=None,
+        composition=None,
+        resources=None,
+        schemas=None,
+        context=None,
+        api=None,
+        render_unknowns=False,
+        crossplane_v1=False,
+        composite_observeds=False,
+    ):
         # Create the request used when running Composition steps.
-        request = protobuf.Message(None, 'request', fnv1.RunFunctionRequest.DESCRIPTOR, fnv1.RunFunctionRequest())
+        if schemas is None:
+            schemas = []
+        if resources is None:
+            resources = []
+        if observed is None:
+            observed = []
+        request = protobuf.Message(
+            None,
+            "request",
+            fnv1.RunFunctionRequest.DESCRIPTOR,
+            fnv1.RunFunctionRequest(),
+        )
         if context is not None:
             request.context = context
 
@@ -299,9 +374,18 @@ class Command(command.Command):
         if observed:
             async with asyncio.TaskGroup() as group:
                 for resource in observed:
-                    name = resource.metadata.annotations['crossplane.io/composition-resource-name']
+                    name = resource.metadata.annotations[
+                        "crossplane.io/composition-resource-name"
+                    ]
                     if name:
-                        group.create_task(self.set_resource(resource, request.observed.resources[name], resources, api))
+                        group.create_task(
+                            self.set_resource(
+                                resource,
+                                request.observed.resources[name],
+                                resources,
+                                api,
+                            )
+                        )
         if api and composite_observeds:
             refs = composite.spec.crossplane.resourceRefs
             if not refs:
@@ -309,10 +393,18 @@ class Command(command.Command):
             if refs:
                 async with asyncio.TaskGroup() as group:
                     for ref in refs:
-                        group.create_task(self.get_composite_ref(composite, ref, request, resources, api))
+                        group.create_task(
+                            self.get_composite_ref(
+                                composite, ref, request, resources, api
+                            )
+                        )
 
         if not composition:
-            if composite.apiVersion in ('pythonic.crossplane.io/v1alpha1', 'pythonic.fortra.com/v1alpha1') and composite.kind == 'Composite':
+            if (
+                composite.apiVersion
+                in ("pythonic.crossplane.io/v1alpha1", "pythonic.fortra.com/v1alpha1")
+                and composite.kind == "Composite"
+            ):
                 composition = self.create_composition(composite)
             else:
                 if not api:
@@ -323,11 +415,20 @@ class Command(command.Command):
                     # Crossplane V1 location
                     revision = composite.spec.compositionRevisionRef
                     if not revision.name:
-                        print('Composite does not contain a CompositionRevision name', file=sys.stderr)
+                        print(
+                            "Composite does not contain a CompositionRevision name",
+                            file=sys.stderr,
+                        )
                         return None
-                composition = await self.kr8s_get(api, 'CompositionRevision', 'apiextensions.crossplane.io/v1', None, revision.name)
+                composition = await self.kr8s_get(
+                    api,
+                    "CompositionRevision",
+                    "apiextensions.crossplane.io/v1",
+                    None,
+                    revision.name,
+                )
                 if not composition:
-                    print(f"Compositioin \"{revision.name}\" not found", file=sys.stderr)
+                    print(f'Compositioin "{revision.name}" not found', file=sys.stderr)
                     return None
 
         # These will hold the response conditions and results.
@@ -340,8 +441,11 @@ class Command(command.Command):
 
         # Process the composition pipeline steps.
         for step in composition.spec.pipeline:
-            if step.functionRef.name != 'function-pythonic':
-                print(f"Only function-pythonic functions can be run: {step.functionRef.name}", file=sys.stderr)
+            if step.functionRef.name != "function-pythonic":
+                print(
+                    f"Only function-pythonic functions can be run: {step.functionRef.name}",
+                    file=sys.stderr,
+                )
                 return None
             if not step.input.step:
                 step.input.step = step.step
@@ -350,44 +454,67 @@ class Command(command.Command):
             # Supply step requested credentials.
             request.credentials()
             for credential in step.credentials:
-                if credential.source == 'Secret' and credential.secretRef:
+                if credential.source == "Secret" and credential.secretRef:
                     namespace = credential.secretRef.namespace
                     name = credential.secretRef.name
                     if namespace and name:
                         for resource in resources:
-                            if resource.kind == 'Secret' and resource.apiVersion == 'v1':
-                                if resource.metadata.namespace == namespace and resource.metadata.name == name:
-                                    data = request.credentials[credential.name].credential_data.data
-                                    data()
-                                    for key, value in resource.data:
-                                        data[key] = protobuf.B64Decode(value)
-                                    break
+                            if (
+                                resource.kind == "Secret"
+                                and resource.apiVersion == "v1"
+                                and resource.metadata.namespace == namespace
+                                and resource.metadata.name == name
+                            ):
+                                data = request.credentials[
+                                    credential.name
+                                ].credential_data.data
+                                data()
+                                for key, value in resource.data:
+                                    data[key] = protobuf.B64Decode(value)
+                                break
                         else:
-                            print(f"Step \"{step.step}\" secret not found: {namespace}/{name}", file=sys.stderr)
+                            print(
+                                f'Step "{step.step}" secret not found: {namespace}/{name}',
+                                file=sys.stderr,
+                            )
                             return None
 
             # Track what extra/required resources have been processed.
-            requirements = protobuf.Message(None, 'requirements', fnv1.Requirements.DESCRIPTOR, fnv1.Requirements())
+            requirements = protobuf.Message(
+                None, "requirements", fnv1.Requirements.DESCRIPTOR, fnv1.Requirements()
+            )
             for _ in range(5):
                 # Fetch the step bootstrap resources specified.
                 request.required_resources()
                 for requirement in step.requirements.requiredResources:
-                    await self.set_required(requirement.requirementName, requirement, request.required_resources, resources, api)
+                    await self.set_required(
+                        requirement.requirementName,
+                        requirement,
+                        request.required_resources,
+                        resources,
+                        api,
+                    )
                 # Fetch the required resources requested.
                 for name, selector in requirements.resources:
-                    await self.set_required(name, selector, request.required_resources, resources, api)
+                    await self.set_required(
+                        name, selector, request.required_resources, resources, api
+                    )
                 # Fetch the now deprecated extra resources requested.
                 request.extra_resources()
                 for name, selector in requirements.extra_resources:
-                    await self.set_required(name, selector, request.extra_resources, resources, api)
+                    await self.set_required(
+                        name, selector, request.extra_resources, resources, api
+                    )
                 # Fetch the schemas requested.
                 request.required_schemas()
                 for name, selector in requirements.schemas:
-                    await self.set_schema(name, selector, request.required_schemas, schemas, api)
+                    await self.set_schema(
+                        name, selector, request.required_schemas, schemas, api
+                    )
                 # Run the step using the function-pythonic function runner.
                 response = protobuf.Message(
                     None,
-                    'response',
+                    "response",
                     fnv1.RunFunctionResponse.DESCRIPTOR,
                     await runner.RunFunction(request._message, None),
                 )
@@ -414,13 +541,18 @@ class Command(command.Command):
 
             # Collect the step's returned conditions.
             for condition in response.conditions:
-                if condition.type not in ('Ready', 'Synced', 'Healthy'):
-                    conditions[protobuf.append] = self.create_condition(condition.type, condition.status, condition.reason, condition.message)
+                if condition.type not in ("Ready", "Synced", "Healthy"):
+                    conditions[protobuf.append] = self.create_condition(
+                        condition.type,
+                        condition.status,
+                        condition.reason,
+                        condition.message,
+                    )
             # Collect the step's returned results.
             for result in response.results:
                 ix = len(results)
-                results[ix].apiVersion = 'render.crossplane.io/v1beta1'
-                results[ix].kind = 'Result'
+                results[ix].apiVersion = "render.crossplane.io/v1beta1"
+                results[ix].kind = "Result"
                 results[ix].step = step.step
                 results[ix].severity = fnv1.Severity.Name(result.severity._value)
                 if result.reason:
@@ -435,7 +567,7 @@ class Command(command.Command):
         # Collect and format all the returned desired composed resources.
         resources = protobuf.List()
         unready = protobuf.List()
-        prefix = composite.metadata.labels['crossplane.io/composite']
+        prefix = composite.metadata.labels["crossplane.io/composite"]
         if not prefix:
             prefix = composite.metadata.name
         for name, resource in request.desired.resources:
@@ -450,27 +582,40 @@ class Command(command.Command):
             resource = resource.resource
             observed = request.observed.resources[name].resource
             if observed:
-                for key in ('namespace', 'generateName', 'name'):
+                for key in ("namespace", "generateName", "name"):
                     if observed.metadata[key]:
                         resource.metadata[key] = observed.metadata[key]
             if not resource.metadata.name and not resource.metadata.generateName:
                 resource.metadata.generateName = f"{prefix}-"
             if composite.metadata.namespace:
                 resource.metadata.namespace = composite.metadata.namespace
-            resource.metadata.annotations['crossplane.io/composition-resource-name'] = name
-            resource.metadata.labels['crossplane.io/composite'] = prefix
-            if composite.metadata.labels['crossplane.io/claim-name'] and composite.metadata.labels['crossplane.io/claim-namespace']:
-                resource.metadata.labels['crossplane.io/claim-namespace'] = composite.metadata.labels['crossplane.io/claim-namespace']
-                resource.metadata.labels['crossplane.io/claim-name'] = composite.metadata.labels['crossplane.io/claim-name']
+            resource.metadata.annotations["crossplane.io/composition-resource-name"] = (
+                name
+            )
+            resource.metadata.labels["crossplane.io/composite"] = prefix
+            if (
+                composite.metadata.labels["crossplane.io/claim-name"]
+                and composite.metadata.labels["crossplane.io/claim-namespace"]
+            ):
+                resource.metadata.labels["crossplane.io/claim-namespace"] = (
+                    composite.metadata.labels["crossplane.io/claim-namespace"]
+                )
+                resource.metadata.labels["crossplane.io/claim-name"] = (
+                    composite.metadata.labels["crossplane.io/claim-name"]
+                )
             elif composite.spec.claimRef.namespace and composite.spec.claimRef.name:
-                resource.metadata.labels['crossplane.io/claim-namespace'] = composite.spec.claimRef.namespace
-                resource.metadata.labels['crossplane.io/claim-name'] = composite.spec.claimRef.name
+                resource.metadata.labels["crossplane.io/claim-namespace"] = (
+                    composite.spec.claimRef.namespace
+                )
+                resource.metadata.labels["crossplane.io/claim-name"] = (
+                    composite.spec.claimRef.name
+                )
             resource.metadata.ownerReferences[0].controller = True
             resource.metadata.ownerReferences[0].blockOwnerDeletion = True
             resource.metadata.ownerReferences[0].apiVersion = composite.apiVersion
             resource.metadata.ownerReferences[0].kind = composite.kind
             resource.metadata.ownerReferences[0].name = composite.metadata.name
-            resource.metadata.ownerReferences[0].uid = ''
+            resource.metadata.ownerReferences[0].uid = ""
             resource.ready = ready
             resources[protobuf.append] = resource
 
@@ -482,11 +627,18 @@ class Command(command.Command):
         composite.kind = request.observed.composite.resource.kind
         # Add in the composite's status.conditions.
         if request.desired.composite.ready == fnv1.Ready.READY_FALSE:
-            condition = self.create_condition('Ready', False, 'Creating')
-        elif request.desired.composite.ready == fnv1.Ready.READY_UNSPECIFIED and len(unready):
-            condition = self.create_condition('Ready', False, 'Creating', f"Unready resources: {','.join(str(name) for name in unready)}")
+            condition = self.create_condition("Ready", False, "Creating")
+        elif request.desired.composite.ready == fnv1.Ready.READY_UNSPECIFIED and len(
+            unready
+        ):
+            condition = self.create_condition(
+                "Ready",
+                False,
+                "Creating",
+                f"Unready resources: {','.join(str(name) for name in unready)}",
+            )
         else:
-            condition = self.create_condition('Ready', True, 'Available')
+            condition = self.create_condition("Ready", True, "Available")
         composite.status.conditions[protobuf.append] = condition
         for condition in conditions:
             composite.status.conditions[protobuf.append] = condition
@@ -494,15 +646,18 @@ class Command(command.Command):
         response = protobuf.Map(
             composite=composite,
             connection=protobuf.Map(
-                apiVersion='render.crossplane.io/v1beta1',
-                kind='Connection',
-                values={key: value for key, value in request.desired.composite.connection_details}
+                apiVersion="render.crossplane.io/v1beta1",
+                kind="Connection",
+                values={
+                    key: value
+                    for key, value in request.desired.composite.connection_details
+                },
             ),
             resources=resources,
             results=results,
             context=protobuf.Map(
-                apiVersion='render.crossplane.io/v1beta1',
-                kind='Context',
+                apiVersion="render.crossplane.io/v1beta1",
+                kind="Context",
                 values=request.context,
             ),
         )
@@ -519,82 +674,128 @@ class Command(command.Command):
                 namespace = None
         source = await self.kr8s_get(api, ref.kind, ref.apiVersion, namespace, ref.name)
         if source:
-            name = source.metadata.annotations['crossplane.io/composition-resource-name']
+            name = source.metadata.annotations[
+                "crossplane.io/composition-resource-name"
+            ]
             if name:
                 destination = request.observed.resources[name]
-                if not destination: # Do not override manual observed
+                if not destination:  # Do not override manual observed
                     await self.set_resource(source, destination, resources, api)
 
-    async def set_required(self, name, selector, requireds, resources=[], api=None):
+    async def set_required(self, name, selector, requireds, resources=None, api=None):
+        if resources is None:
+            resources = []
         if not name:
             return
         name = str(name)
         items = requireds[name].items
-        items() # Force this to get created
+        items()  # Force this to get created
         for resource in resources:
-            if selector.api_version == resource.apiVersion and selector.kind == resource.kind:
-                if ((not len(selector.namespace) and not len(resource.metadata.namespace))
+            if (
+                selector.api_version == resource.apiVersion
+                and selector.kind == resource.kind
+                and (
+                    (
+                        not len(selector.namespace)
+                        and not len(resource.metadata.namespace)
+                    )
                     or (selector.namespace == resource.metadata.namespace)
-                    ):
-                    if selector.match_name == resource.metadata.name:
-                        await self.set_resource(resource, items[protobuf.append], resources, api)
-                    elif selector.match_labels.labels:
-                        for key, value in selector.match_labels.labels:
-                            if value != resource.metadata.labels[key]:
-                                break
-                        else:
-                            await self.set_resource(resource, items[protobuf.append], resources, api)
+                )
+            ):
+                if selector.match_name == resource.metadata.name:
+                    await self.set_resource(
+                        resource, items[protobuf.append], resources, api
+                    )
+                elif selector.match_labels.labels:
+                    for key, value in selector.match_labels.labels:
+                        if value != resource.metadata.labels[key]:
+                            break
+                    else:
+                        await self.set_resource(
+                            resource, items[protobuf.append], resources, api
+                        )
         if not len(items) and api:
             if len(selector.match_name):
-                resource = await self.kr8s_get(api, selector.kind, selector.api_version, selector.namespace, selector.match_name)
+                resource = await self.kr8s_get(
+                    api,
+                    selector.kind,
+                    selector.api_version,
+                    selector.namespace,
+                    selector.match_name,
+                )
                 if resource:
-                    await self.set_resource(resource, items[protobuf.append], resources, api)
+                    await self.set_resource(
+                        resource, items[protobuf.append], resources, api
+                    )
             elif len(selector.match_labels.labels):
-                for resource in await self.kr8s_list(api, selector.kind, selector.api_version, selector.namespace, selector.match_labels.labels):
-                    await self.set_resource(resource, items[protobuf.append], resources, api)
+                for resource in await self.kr8s_list(
+                    api,
+                    selector.kind,
+                    selector.api_version,
+                    selector.namespace,
+                    selector.match_labels.labels,
+                ):
+                    await self.set_resource(
+                        resource, items[protobuf.append], resources, api
+                    )
 
-    async def set_resource(self, source, destination, resources=[], api=None):
+    async def set_resource(self, source, destination, resources=None, api=None):
+        if resources is None:
+            resources = []
         destination.resource = source
-        namespace = source.spec.writeConnectionSecretToRef.namespace or source.metadata.namespace
+        namespace = (
+            source.spec.writeConnectionSecretToRef.namespace
+            or source.metadata.namespace
+        )
         name = source.spec.writeConnectionSecretToRef.name
         if namespace and name:
             connection = None
             for resource in resources:
-                if resource.kind == 'Secret' and resource.apiVersion == 'v1':
-                    if resource.metadata.namespace == namespace and resource.metadata.name == name:
-                        connection = resource
-                        break
+                if (
+                    resource.kind == "Secret"
+                    and resource.apiVersion == "v1"
+                    and resource.metadata.namespace == namespace
+                    and resource.metadata.name == name
+                ):
+                    connection = resource
+                    break
             else:
                 if api:
-                    connection = await self.kr8s_get(api, 'Secret', 'v1', namespace, name)
+                    connection = await self.kr8s_get(
+                        api, "Secret", "v1", namespace, name
+                    )
             if connection:
                 destination.connection_details()
                 for key, value in connection.data:
                     destination.connection_details[key] = protobuf.B64Decode(value)
 
-    async def set_schema(self, name, selector, schemas, documents=[], api=None):
+    async def set_schema(self, name, selector, schemas, documents=None, api=None):
+        if documents is None:
+            documents = []
         if not name:
             return
         name = str(name)
         schema = schemas[name].openapi_v3
-        schema() # Force this to get created
+        schema()  # Force this to get created
         gvk = protobuf.Map(kind=selector.kind)
         version = str(selector.api_version)
-        if '/' in version:
-            gvk.group, gvk.version = version.split('/', 1)
+        if "/" in version:
+            gvk.group, gvk.version = version.split("/", 1)
         else:
-            gvk.group = ''
+            gvk.group = ""
             gvk.version = version
         for document in documents:
             if self.find_schema(gvk, document, schema):
                 return
         if api:
-            if gvk.group == '':
+            if gvk.group == "":
                 url = f"api/{gvk.version}"
             else:
                 url = f"apis/{gvk.group}/{gvk.version}"
             try:
-                async with api.call_api(base='/openapi/v3', version='', url=url) as response:
+                async with api.call_api(
+                    base="/openapi/v3", version="", url=url
+                ) as response:
                     document = protobuf.Value(None, None, response.json())
             except kr8s.NotFoundError:
                 return
@@ -602,9 +803,11 @@ class Command(command.Command):
 
     def find_schema(self, gvk, document, schema):
         for name, s in document.components.schemas:
-            gvks = s['x-kubernetes-group-version-kind']
+            gvks = s["x-kubernetes-group-version-kind"]
             if len(gvks) == 1 and gvks[0] == gvk:
-                self.resolve_ref(document, set(), f"#/components/schemas/{name}", schema)
+                self.resolve_ref(
+                    document, set(), f"#/components/schemas/{name}", schema
+                )
                 return True
         return False
 
@@ -615,8 +818,8 @@ class Command(command.Command):
         if ref in visiting:
             return
         d = None
-        for segment in ref.split('/'):
-            if segment == '#':
+        for segment in ref.split("/"):
+            if segment == "#":
                 d = document
             else:
                 d = d[segment]
@@ -630,11 +833,11 @@ class Command(command.Command):
             visiting.remove(ref)
 
     def copy_schema(self, document, visiting, key, value, schema):
-        if key == '$ref':
+        if key == "$ref":
             self.resolve_ref(document, visiting, value, schema)
-        elif key == 'allOf':
+        elif key == "allOf":
             if value._isList and len(value) == 1:
-                self.resolve_ref(document, visiting, value[0]['$ref'], schema)
+                self.resolve_ref(document, visiting, value[0]["$ref"], schema)
         else:
             if value._isMap:
                 s = schema[key]
@@ -657,26 +860,26 @@ class Command(command.Command):
     def create_condition(self, type, status, reason, message=None):
         if isinstance(status, protobuf.FieldMessage):
             if status._value == fnv1.Status.STATUS_CONDITION_TRUE:
-                status = 'True'
+                status = "True"
             elif status._value == fnv1.Status.STATUS_CONDITION_FALSE:
-                status = 'False'
+                status = "False"
             else:
-                status = 'Unknown'
+                status = "Unknown"
         elif isinstance(status, bool):
             if status:
-                status = 'True'
+                status = "True"
             else:
-                status = 'False'
+                status = "False"
         elif status is None:
-            status = 'Unknown'
+            status = "Unknown"
         condition = {
-            'type': type,
-            'status': status,
-            'reason': reason,
-            'lastTransitionTime': '2026-01-01T00:00:00Z'
+            "type": type,
+            "status": status,
+            "reason": reason,
+            "lastTransitionTime": "2026-01-01T00:00:00Z",
         }
         if message:
-            condition['message'] = message
+            condition["message"] = message
         return condition
 
     async def kr8s_get(self, api, kind, apiVersion, namespace, name):
@@ -690,10 +893,10 @@ class Command(command.Command):
             else:
                 resource = await clazz.get(str(name), api=api)
             resource = protobuf.Value(None, None, resource.raw)
-            result = 'found'
+            result = "found"
         except kr8s.NotFoundError:
             resource = None
-            result = 'missing'
+            result = "missing"
         self.logger.debug(f"Resource {result}: {':'.join(fullName)}")
         return resource
 
@@ -703,23 +906,22 @@ class Command(command.Command):
         resources = [
             protobuf.Value(None, None, resource.raw)
             async for resource in clazz.list(
-                    namespace=str(namespace) if namespaced else None,
-                    label_selector={
-                        label: str(value)
-                        for label, value in labelSelector
-                    },
-                    api=api,
+                namespace=str(namespace) if namespaced else None,
+                label_selector={label: str(value) for label, value in labelSelector},
+                api=api,
             )
         ]
         if self.logger.isEnabledFor(logging.DEBUG):
             fullName = [str(kind), str(apiVersion)]
             if namespaced:
                 fullName.append(str(namespace))
-            fullName.append('&'.join(f"{label}={value}" for label, value in labelSelector))
+            fullName.append(
+                "&".join(f"{label}={value}" for label, value in labelSelector)
+            )
             if resources:
                 result = f"found {INFLECT.number_to_words(len(resources))}"
             else:
-                result = 'missing'
+                result = "missing"
             self.logger.debug(f"Resources {result}: {':'.join(fullName)}")
         return resources
 
@@ -728,4 +930,10 @@ class Command(command.Command):
             return kr8s.asyncio.objects.get_class(str(kind), str(apiVersion), True)
         except KeyError:
             pass
-        return kr8s.asyncio.objects.new_class(str(kind), str(apiVersion), True, namespaced, plural=INFLECT.plural_noun(str(kind)).lower())
+        return kr8s.asyncio.objects.new_class(
+            str(kind),
+            str(apiVersion),
+            True,
+            namespaced,
+            plural=INFLECT.plural_noun(str(kind)).lower(),
+        )
