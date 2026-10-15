@@ -39,7 +39,7 @@ env:
 
 jobs:
   ruff-format:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
     - name: Checkout
       uses: actions/checkout@v7
@@ -49,7 +49,7 @@ jobs:
       run: uv run ruff format --diff
 
   ruff-check:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
     - name: Checkout
       uses: actions/checkout@v7
