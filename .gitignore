@@ -6,4 +6,5 @@ local/
 __pycache__/
 .coverage
 dist/
-
+reports/
+uv.lock

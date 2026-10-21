@@ -3,6 +3,15 @@
 import argparse
 import asyncio
 import sys
+import warnings
+
+# kr8s emits this at import time, so filter before importing it.
+warnings.filterwarnings(
+    "ignore",
+    message="'asyncio.iscoroutinefunction' is deprecated",
+    category=DeprecationWarning,
+    module="kr8s._vendored.asyncache",
+)
 
 from . import (
     grpc,
