@@ -10,7 +10,7 @@ authors = [
 requires-python = ">=3.12,<3.16"
 dependencies = [
   "grpcio==1.84.0",
-  "inflect==7.5.0",
+  "inflect==7.6.0",
   "kr8s==0.20.15",
   "protobuf==7.36.2",
   "pyyaml==6.0.3",
