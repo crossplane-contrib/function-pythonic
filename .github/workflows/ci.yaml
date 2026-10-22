@@ -44,7 +44,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v7
     - name: Install uv
-      uses: astral-sh/setup-uv@v10.3.1
+      uses: astral-sh/setup-uv@v10.3.2
     - name: Ruff Format
       run: uv run ruff format --diff
 
@@ -54,7 +54,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v7
     - name: Install uv
-      uses: astral-sh/setup-uv@v10.3.1
+      uses: astral-sh/setup-uv@v10.3.2
     - name: Ruff Check
       run: uv run ruff check
 
@@ -64,7 +64,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v7
     - name: Install uv
-      uses: astral-sh/setup-uv@v10.3.1
+      uses: astral-sh/setup-uv@v10.3.2
     - name: Generate run_function protobuf
       run: uv run poe generate-protoc
     - name: Run Unit Tests
@@ -76,7 +76,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v7
     - name: Install uv
-      uses: astral-sh/setup-uv@v10.3.1
+      uses: astral-sh/setup-uv@v10.3.2
     - name: Generate run_function protobuf
       run: uv run poe generate-protoc
     - name: Set Default PyPI Project Version
@@ -231,7 +231,7 @@ jobs:
         path: dist
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v10.3.1
+      uses: astral-sh/setup-uv@v10.3.2
 
     - name: Publish to PyPI
       env:
