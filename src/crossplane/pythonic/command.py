@@ -1,12 +1,14 @@
+import argparse
 import logging
 import pathlib
 import sys
 
 
 class Command:
-    name = None
-    command = None
-    description = None
+    name: str | None = None
+    command: str | None = None
+    help: str | None = None
+    description: str | None = None
 
     @classmethod
     def create(cls, subparsers):
@@ -66,8 +68,8 @@ class Command:
             help="Enable Crossplane V1 compatibility mode",
         )
 
-    def __init__(self, args=None):
-        self.args = args
+    def __init__(self, args: argparse.Namespace | None = None):
+        self.args = args if args is not None else argparse.Namespace()
         self.initialize()
 
     def initialize(self):
@@ -98,8 +100,9 @@ class Command:
         if self.args.allow_oversize_protos:
             from google.protobuf.internal import api_implementation
 
-            if api_implementation._c_module:
-                api_implementation._c_module.SetAllowOversizeProtos(True)
+            c_module = getattr(api_implementation, "_c_module", None)
+            if c_module:
+                c_module.SetAllowOversizeProtos(True)
 
     async def run(self):
         raise NotImplementedError()

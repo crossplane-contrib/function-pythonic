@@ -58,7 +58,8 @@ async def startup(settings, **_):
 
 @kopf.on.cleanup()
 async def cleanup(**_):
-    await GRPC_SERVER.stop(5)
+    if GRPC_SERVER:
+        await GRPC_SERVER.stop(5)
 
 
 async def create(resource, labels, body, logger, **_):
@@ -141,7 +142,8 @@ def package_create(resource, action, package_dir, package, logger):
                     package_name.write_text(value)
                 module, name = package_file_name(package_name)
                 if module:
-                    GRPC_RUNNER.invalidate_module(name)
+                    if GRPC_RUNNER:
+                        GRPC_RUNNER.invalidate_module(name)
                     logger.info(f"{action} module: {name}")
                 else:
                     logger.info(f"{action} file: {name}")
@@ -157,7 +159,8 @@ def package_delete(action, package_dir, package, logger):
                 package_name.unlink(missing_ok=True)
                 module, name = package_file_name(package_name)
                 if module:
-                    GRPC_RUNNER.invalidate_module(name)
+                    if GRPC_RUNNER:
+                        GRPC_RUNNER.invalidate_module(name)
                     logger.info(f"{action} module: {name}")
                 else:
                     logger.info(f"{action} file: {name}")
@@ -170,7 +173,8 @@ def package_delete(action, package_dir, package, logger):
                     parent.rmdir()
                     module = str(parent.relative_to(PACKAGES_DIR)).replace("/", ".")
                     if module != ".":
-                        GRPC_RUNNER.invalidate_module(module)
+                        if GRPC_RUNNER:
+                            GRPC_RUNNER.invalidate_module(module)
                         logger.info(f"{action} package: {module}")
                     parent = parent.parent
             elif isinstance(value, dict):

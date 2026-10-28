@@ -1,4 +1,10 @@
-def resource_ready(resource):
+from . import (
+    composite,
+    protobuf,
+)
+
+
+def resource_ready(resource: composite.Resource) -> protobuf.Value | None:
     if not resource.observed:
         return None
     return _checks.get(
@@ -121,7 +127,7 @@ class HorizontalPodAutoscaler(Check):
         for type in ("ScalingActive", "ScalingLimited"):
             if resource.conditions[type].status:
                 return resource.observed.metadata.name
-        return resource.status.notScalingActiveOrLimiited
+        return resource.status.notScalingActiveOrLimited
 
 
 class Ingress(Check):
@@ -129,7 +135,7 @@ class Ingress(Check):
 
     def ready(self, resource):
         if not len(resource.status.loadBalancer.ingress):
-            return resource.status.noLoadBalanceIngresses
+            return resource.status.noLoadBalancerIngresses
         return resource.observed.metadata.name
 
 
@@ -179,7 +185,7 @@ class Pod(Check):
 
 
 class ReplicaSet(Check):
-    apiVersion = "v1"
+    apiVersion = "apps/v1"
 
     def ready(self, resource):
         if int(resource.status.observedGeneration) < int(
@@ -195,7 +201,7 @@ class ReplicaSet(Check):
         if int(resource.status.availableReplicas) < int(
             resource.observed.spec.replicas or 1
         ):
-            return resource.status.tooFewavailableReplicas
+            return resource.status.tooFewAvailableReplicas
         return resource.observed.metadata.name
 
 
@@ -238,5 +244,5 @@ class StatefulSet(Check):
             if replicas != value:
                 return resource.status[f"{field}NotReplicas"]
         if resource.status.currentRevision != resource.status.updateRevision:
-            return resource.status.currentRevisionNotUpdateReivsion
+            return resource.status.currentRevisionNotUpdateRevision
         return resource.observed.metadata.name

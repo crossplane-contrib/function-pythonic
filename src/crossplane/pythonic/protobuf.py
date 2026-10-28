@@ -20,10 +20,12 @@ import datetime
 import json
 import sys
 
+import google.protobuf.message
 import google.protobuf.struct_pb2
 import yaml
+from google.protobuf.internal.containers import RepeatedCompositeFieldContainer
 
-_Unknown = object()
+_Unknown = sentinel("_Unknown")
 append = sys.maxsize
 
 
@@ -435,11 +437,18 @@ class MapMessage:
 
 
 class RepeatedMessage:
-    def __init__(self, parent, key, field, messages=_Unknown, readOnly=False):
+    def __init__(
+        self,
+        parent,
+        key,
+        field,
+        messages: RepeatedCompositeFieldContainer | _Unknown = _Unknown,
+        readOnly=False,
+    ):
         self._parent = parent
         self._key = key
         self._field = field
-        self._messages = messages
+        self._messages: RepeatedCompositeFieldContainer | _Unknown = messages
         self._readOnly = readOnly
         self._cache = {}
 
@@ -547,7 +556,9 @@ class RepeatedMessage:
             raise ValueError(f"{self._readOnly} is read only")
         key = self._validate_key(key)
         if self._messages is _Unknown:
-            self.__dict__["_messages"] = self._parent._create_child(self._key)
+            self._messages: RepeatedCompositeFieldContainer = (
+                self._parent._create_child(self._key)
+            )
         if key == append:
             key = len(self._messages)
         elif key < 0:
@@ -560,7 +571,9 @@ class RepeatedMessage:
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
         if self._messages is _Unknown:
-            self.__dict__["_messages"] = self._parent._create_child(self._key)
+            self._messages: RepeatedCompositeFieldContainer = (
+                self._parent._create_child(self._key)
+            )
         self._messages.clear()
         self._cache.clear()
         for arg in args:
@@ -608,7 +621,9 @@ class RepeatedMessage:
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
         if self._messages is _Unknown:
-            self._messages = self._parent._create_child(self._key)
+            self._messages: RepeatedCompositeFieldContainer = (
+                self._parent._create_child(self._key)
+            )
         if message is _Unknown:
             message = self._messages.add()
         else:
@@ -1437,41 +1452,41 @@ def _formatObject(object, spec="yaml"):
 
 
 class _JSONEncoder(json.JSONEncoder):
-    def default(self, object):
-        if isinstance(object, (Message, MapMessage)):
-            if object:
-                return {key: value for key, value in object}
+    def default(self, o):
+        if isinstance(o, (Message, MapMessage)):
+            if o:
+                return {key: value for key, value in o}
             return None
-        if isinstance(object, RepeatedMessage):
-            if object:
-                return [value for value in object]
+        if isinstance(o, RepeatedMessage):
+            if o:
+                return [value for value in o]
             return None
-        if isinstance(object, FieldMessage):
-            return object._value
-        if isinstance(object, Value):
-            match object._kind:
+        if isinstance(o, FieldMessage):
+            return o._value
+        if isinstance(o, Value):
+            match o._kind:
                 case "struct_value" | "Struc":
-                    return {key: value for key, value in object}
+                    return {key: value for key, value in o}
                 case "list_value" | "ListValue":
-                    return [value for value in object]
+                    return [value for value in o]
                 case "string_value":
-                    return object._value.string_value
+                    return o._value.string_value
                 case "null_value":
                     return None
                 case "number_value":
-                    value = object._value.number_value
+                    value = o._value.number_value
                     if value.is_integer():
                         value = int(value)
                     return value
                 case "bool_value":
-                    return object._value.bool_value
+                    return o._value.bool_value
                 case "Unknown":
                     return "<<UNKNOWN>>"
                 case _:
                     return "<<UNEXPECTED>>"
-        if isinstance(object, datetime.datetime):
-            return object.isoformat()
-        return super().default(object)
+        if isinstance(o, datetime.datetime):
+            return o.isoformat()
+        return super().default(o)
 
 
 class _Dumper(yaml.SafeDumper):
@@ -1492,7 +1507,7 @@ class _Dumper(yaml.SafeDumper):
         if isinstance(field._value, bytes):
             return self.represent_binary(field._value)
         if field._value is None:
-            return self.represent_none()
+            return self.represent_none(field._value)
         if isinstance(field._value, int):
             return self.represent_int(field._value)
         if isinstance(field._value, float):

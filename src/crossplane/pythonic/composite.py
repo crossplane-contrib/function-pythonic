@@ -1,4 +1,5 @@
 import datetime
+import logging
 
 from google.protobuf.duration_pb2 import Duration
 
@@ -8,7 +9,7 @@ from . import (
 )
 from .proto.v1 import run_function_pb2 as fnv1
 
-_notset = object()
+_notset = sentinel("_notset")
 
 
 class ConnectionSecret:
@@ -96,7 +97,12 @@ class Ready:
 
 
 class BaseComposite:
-    def __init__(self, crossplane_v1, request, logger):
+    def __init__(
+        self,
+        crossplane_v1: bool,
+        request: fnv1.RunFunctionRequest,
+        logger: logging.Logger,
+    ) -> None:
         self.crossplane_v1 = crossplane_v1
         self.request = protobuf.Message(
             None, "request", request.DESCRIPTOR, request, "Function Request"
@@ -284,22 +290,26 @@ class Resource:
         self.unknownsFatal = None
 
     def __call__(
-        self, kind=_notset, apiVersion=_notset, namespace=_notset, name=_notset
+        self,
+        kind: str | _notset = _notset,
+        apiVersion: str | _notset = _notset,
+        namespace: str | _notset = _notset,
+        name: str | _notset = _notset,
     ):
         self.desired()
-        if kind != _notset:
+        if kind is not _notset:
             # Allow for apiVersion in the first arg and kind in the second arg
             if "/" in kind or kind == "v1":
-                if apiVersion != _notset:
+                if apiVersion is not _notset:
                     self.kind = apiVersion
                 apiVersion = kind
             else:
                 self.kind = kind
-        if apiVersion != _notset:
+        if apiVersion is not _notset:
             self.apiVersion = apiVersion
-        if namespace != _notset:
+        if namespace is not _notset:
             self.metadata.namespace = namespace
-        if name != _notset:
+        if name is not _notset:
             self.metadata.name = name
         return self
 
@@ -503,28 +513,28 @@ class RequiredResources:
 
     def __call__(
         self,
-        kind=_notset,
+        kind: str | _notset = _notset,
         apiVersion=_notset,
         namespace=_notset,
         name=_notset,
         labels=_notset,
     ):
         self._selector()
-        if kind != _notset:
+        if kind is not _notset:
             # Allow for apiVersion in the first arg and kind in the second arg
             if "/" in kind or kind == "v1":
-                if apiVersion != _notset:
+                if apiVersion is not _notset:
                     self.kind = apiVersion
                 apiVersion = kind
             else:
                 self.kind = kind
-        if apiVersion != _notset:
+        if apiVersion is not _notset:
             self.apiVersion = apiVersion
-        if namespace != _notset:
+        if namespace is not _notset:
             self.namespace = namespace
-        if name != _notset:
+        if name is not _notset:
             self.matchName = name
-        if labels != _notset:
+        if labels is not _notset:
             self.matchLabels = labels
         return self
 
@@ -658,17 +668,17 @@ class Schema:
         self._selector = composite.response.requirements.schemas[name]
         self._schema = composite.request.required_schemas[name].openapi_v3
 
-    def __call__(self, kind=_notset, apiVersion=_notset):
+    def __call__(self, kind: str | _notset = _notset, apiVersion=_notset):
         self._selector()
-        if kind != _notset:
+        if kind is not _notset:
             # Allow for apiVersion in the first arg and kind in the second arg
             if "/" in kind or kind == "v1":
-                if apiVersion != _notset:
+                if apiVersion is not _notset:
                     self.kind = apiVersion
                 apiVersion = kind
             else:
                 self.kind = kind
-        if apiVersion != _notset:
+        if apiVersion is not _notset:
             self.apiVersion = apiVersion
         return self
 
@@ -789,13 +799,13 @@ class Condition(protobuf.ProtobufValue):
 
     def __call__(self, reason=_notset, message=_notset, status=_notset, claim=_notset):
         self._find_condition(True)
-        if reason != _notset:
+        if reason is not _notset:
             self.reason = reason
-        if message != _notset:
+        if message is not _notset:
             self.message = message
-        if status != _notset:
+        if status is not _notset:
             self.status = status
-        if claim != _notset:
+        if claim is not _notset:
             self.claim = claim
         return self
 
@@ -891,33 +901,33 @@ class Results:
     def info(self, reason=_notset, message=_notset, claim=_notset):
         result = Result(self._results.append())
         result.info = True
-        if reason != _notset:
+        if reason is not _notset:
             result.reason = reason
-        if message != _notset:
+        if message is not _notset:
             result.message = message
-        if claim != _notset:
+        if claim is not _notset:
             result.claim = claim
         return result
 
     def warning(self, reason=_notset, message=_notset, claim=_notset):
         result = Result(self._results.append())
         result.warning = True
-        if reason != _notset:
+        if reason is not _notset:
             result.reason = reason
-        if message != _notset:
+        if message is not _notset:
             result.message = message
-        if claim != _notset:
+        if claim is not _notset:
             result.claim = claim
         return result
 
     def fatal(self, reason=_notset, message=_notset, claim=_notset):
         result = Result(self._results.append())
         result.fatal = True
-        if reason != _notset:
+        if reason is not _notset:
             result.reason = reason
-        if message != _notset:
+        if message is not _notset:
             result.message = message
-        if claim != _notset:
+        if claim is not _notset:
             result.claim = claim
         return result
 
@@ -938,19 +948,22 @@ class Results:
 
 
 class Result:
-    def __init__(self, result=None):
+    def __init__(self, result: fnv1.Result | None = None):
         self._result = result
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return self._result is not None
 
     @property
     def info(self):
-        return bool(self) and self._result.severity == fnv1.Severity.SEVERITY_NORMAL
+        return (
+            self._result is not None
+            and self._result.severity == fnv1.Severity.SEVERITY_NORMAL
+        )
 
     @info.setter
     def info(self, info):
-        if bool(self):
+        if self._result is not None:
             if info:
                 self._result.severity = fnv1.Severity.SEVERITY_NORMAL
             else:
@@ -958,11 +971,14 @@ class Result:
 
     @property
     def warning(self):
-        return bool(self) and self._result.severity == fnv1.Severity.SEVERITY_WARNING
+        return (
+            self._result is not None
+            and self._result.severity == fnv1.Severity.SEVERITY_WARNING
+        )
 
     @warning.setter
     def warning(self, warning):
-        if bool(self):
+        if self._result is not None:
             if warning:
                 self._result.severity = fnv1.Severity.SEVERITY_WARNING
             else:
@@ -970,11 +986,14 @@ class Result:
 
     @property
     def fatal(self):
-        return bool(self) and self._result.severity == fnv1.Severity.SEVERITY_FATAL
+        return (
+            self._result is not None
+            and self._result.severity == fnv1.Severity.SEVERITY_FATAL
+        )
 
     @fatal.setter
     def fatal(self, fatal):
-        if bool(self):
+        if self._result is not None:
             if fatal:
                 self._result.severity = fnv1.Severity.SEVERITY_FATAL
             else:
@@ -982,31 +1001,32 @@ class Result:
 
     @property
     def reason(self):
-        return self._result.reason if bool(self) else None
+        return self._result.reason if self._result is not None else None
 
     @reason.setter
     def reason(self, reason):
-        if bool(self):
+        if self._result is not None:
             self._result.reason = reason
 
     @property
     def message(self):
-        return self._result.message if bool(self) else None
+        return self._result.message if self._result is not None else None
 
     @message.setter
     def message(self, message):
-        if bool(self):
+        if self._result is not None:
             self._result.message = message
 
     @property
     def claim(self):
         return (
-            bool(self) and self._result.target == fnv1.Target.TARGET_COMPOSITE_AND_CLAIM
+            self._result is not None
+            and self._result.target == fnv1.Target.TARGET_COMPOSITE_AND_CLAIM
         )
 
     @claim.setter
     def claim(self, claim):
-        if bool(self):
+        if self._result is not None:
             if claim:
                 self._result.target = fnv1.Target.TARGET_COMPOSITE_AND_CLAIM
             elif claim == None or (

@@ -15,7 +15,7 @@ from .proto.v1 import run_function_pb2_grpc as grpcv1
 logger = logging.getLogger(__name__)
 
 
-class FunctionRunner(grpcv1.FunctionRunnerService):
+class FunctionRunner(grpcv1.FunctionRunnerServiceServicer):
     """A FunctionRunner handles gRPC RunFunctionRequests."""
 
     def __init__(self, renderUnknowns=False, crossplane_v1=False):
@@ -35,7 +35,9 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         self.clazzes.clear()
 
     async def RunFunction(
-        self, request: fnv1.RunFunctionRequest, _: grpc.aio.ServicerContext
+        self,
+        request: fnv1.RunFunctionRequest,
+        context: grpc.aio.ServicerContext | None = None,
     ) -> fnv1.RunFunctionResponse:
         try:
             return await self.run_function(request)

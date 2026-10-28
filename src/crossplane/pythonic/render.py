@@ -114,7 +114,7 @@ class Command(command.Command):
         )
 
     def initialize(self):
-        if self.args:
+        if vars(self.args):
             self.initialize_function()
         self.logger = logging.getLogger(__name__)
 
@@ -817,14 +817,11 @@ class Command(command.Command):
         ref = str(ref)
         if ref in visiting:
             return
-        d = None
-        for segment in ref.split("/"):
-            if segment == "#":
-                d = document
-            else:
-                d = d[segment]
-        if not d:
+        if not ref.startswith("#?"):
             return
+        d = document
+        for segment in ref.split("/")[1:]:
+            d = d[segment]
         visiting.add(ref)
         try:
             for name, value in d:
@@ -919,7 +916,7 @@ class Command(command.Command):
                 "&".join(f"{label}={value}" for label, value in labelSelector)
             )
             if resources:
-                result = f"found {INFLECT.number_to_words(len(resources))}"
+                result = f"found {INFLECT.number_to_words(str(len(resources)))}"
             else:
                 result = "missing"
             self.logger.debug(f"Resources {result}: {':'.join(fullName)}")
