@@ -5,26 +5,31 @@ import importlib
 import inspect
 import logging
 import sys
+import typing
 
 import grpc
+from google.protobuf.struct_pb2 import Struct
+
+from crossplane.pythonic.composite import BaseComposite
 
 from .. import pythonic
+from . import protobuf
 from .proto.v1 import run_function_pb2 as fnv1
 from .proto.v1 import run_function_pb2_grpc as grpcv1
 
 logger = logging.getLogger(__name__)
 
 
-class FunctionRunner(grpcv1.FunctionRunnerService):
+class FunctionRunner(grpcv1.FunctionRunnerServiceServicer):
     """A FunctionRunner handles gRPC RunFunctionRequests."""
 
-    def __init__(self, renderUnknowns=False, crossplane_v1=False):
+    def __init__(self, renderUnknowns: bool = False, crossplane_v1: bool = False):
         """Create a new FunctionRunner."""
-        self.renderUnknowns = renderUnknowns
-        self.crossplane_v1 = crossplane_v1
-        self.clazzes = {}
+        self.renderUnknowns: bool = renderUnknowns
+        self.crossplane_v1: bool = crossplane_v1
+        self.clazzes: dict[str, type[pythonic.BaseComposite]] = {}
 
-    def invalidate_module(self, module):
+    def invalidate_module(self, module: str) -> None:
         ix = len(module)
         while ix > 0:
             module = module[:ix]
@@ -35,37 +40,46 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         self.clazzes.clear()
 
     async def RunFunction(
-        self, request: fnv1.RunFunctionRequest, _: grpc.aio.ServicerContext
+        self,
+        request: fnv1.RunFunctionRequest,
+        context: grpc.aio.ServicerContext | None = None,
     ) -> fnv1.RunFunctionResponse:
         try:
             return await self.run_function(request)
         except Exception as e:  # noqa: BLE001
             return self.fatal(request, logger, "RunFunction", e)
 
-    async def run_function(self, request):
-        composite = request.observed.composite.resource
+    async def run_function(
+        self, request: fnv1.RunFunctionRequest
+    ) -> fnv1.RunFunctionResponse:
+        composite: Struct = request.observed.composite.resource
         if composite and composite.fields:
-            name = list(reversed(composite["apiVersion"].split("/")[0].split(".")))
-            name.append(composite["kind"])
-            name.append(composite["metadata"]["name"])
+            name: list[str] = list(
+                reversed(str(composite["apiVersion"]).split("/")[0].split("."))
+            )
+            name.append(str(composite["kind"]))
+            name.append(str(typing.cast(Struct, composite["metadata"])["name"]))
             logger = logging.getLogger(".".join(name))
             if "inlined" in request.input and request.input["inlined"]:  # noqa: RUF019
-                if (
-                    "spec" not in composite
-                    or request.input["inlined"] not in composite["spec"]
-                ):
+                if "spec" not in composite or str(
+                    request.input["inlined"]
+                ) not in typing.cast(Struct, composite["spec"]):
                     return self.fatal(
                         request,
                         logger,
                         f"Missing inlined spec.{request.input['inlined']}",
                     )
-                composite = composite["spec"][request.input["inlined"]]
+                composite: str = str(
+                    typing.cast(Struct, composite["spec"])[
+                        str(request.input["inlined"])
+                    ],
+                )
             else:
                 if "composite" not in request.input:
                     return self.fatal(
                         request, logger, 'Missing composition input "composite"'
                     )
-                composite = request.input["composite"]
+                composite: str = str(request.input["composite"])
             operation = False
         else:
             logger = logging.getLogger("operation")
@@ -73,7 +87,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                 return self.fatal(
                     request, logger, 'Missing operation input "composite"'
                 )
-            composite = request.input["composite"]
+            composite: str = str(request.input["composite"])
             operation = True
 
         # Ideally this is something the Function API provides
@@ -111,7 +125,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                         "Composite script does not have a BaseComposite class",
                     )
             else:
-                composite = composite.rsplit(".", 1)
+                composite: list[str] = composite.rsplit(".", 1)
                 if len(composite) == 1:
                     return self.fatal(
                         request,
@@ -129,7 +143,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                         logger,
                         f"{composite[0]} does not define: {composite[1]}",
                     )
-                composite = ".".join(composite)
+                composite: str = ".".join(composite)
                 if not inspect.isclass(clazz):
                     return self.fatal(request, logger, f"{composite} is not a class")
                 if not issubclass(clazz, pythonic.BaseComposite):
@@ -147,7 +161,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                 logger = logging.getLogger(f"operation.{composite}")
 
         try:
-            composite = clazz(self.crossplane_v1, request, logger)
+            composite: BaseComposite = clazz(self.crossplane_v1, request, logger)
         except Exception as e:  # noqa: BLE001
             return self.fatal(request, logger, "Instantiate", e)
 
@@ -185,13 +199,19 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
             self.process_usages(composite)
             self.process_unknowns(composite)
             # Perform auto ready on all resources.
-            for name, resource in composite.resources:
+            for _, resource in composite.resources:
                 resource.ready  # noqa: B018
             logger.info("Completed compose")
 
-        return composite.response._message
+        return typing.cast(fnv1.RunFunctionResponse, composite.response._message)
 
-    def fatal(self, request, logger, message, exception=None):
+    def fatal(
+        self,
+        request: fnv1.RunFunctionRequest,
+        logger: logging.Logger,
+        message: str,
+        exception: Exception | None = None,
+    ) -> fnv1.RunFunctionResponse:
         if exception:
             message += " exception"
             logger.exception(message)
@@ -213,8 +233,8 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
             ],
         )
 
-    def get_schemas(self, step, composite):
-        schemas = []
+    def get_schemas(self, step: protobuf.Value, composite: BaseComposite) -> list[str]:
+        schemas: list[str] = []
         for name, schema in composite.schemas:
             if len(schema.kind) and len(schema.apiVersion):
                 s = pythonic.Map(kind=schema.kind, apiVersion=schema.apiVersion)
@@ -223,8 +243,10 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                     schemas.append(name)
         return schemas
 
-    def get_requireds(self, step, composite):
-        requireds = []
+    def get_requireds(
+        self, step: protobuf.Value, composite: BaseComposite
+    ) -> list[str]:
+        requireds: list[str] = []
         for name, required in composite.requireds:
             if len(required.kind) and len(required.apiVersion):
                 r = pythonic.Map(kind=required.kind, apiVersion=required.apiVersion)
@@ -239,7 +261,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                     requireds.append(name)
         return requireds
 
-    def process_usages(self, composite):
+    def process_usages(self, composite: BaseComposite) -> None:
         if self.crossplane_v1:
             apiVersion = "apiextensions.crossplane.io/v1beta1"
         else:
@@ -285,7 +307,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                             )
                     for name, dependencies in resources.items():
                         source = composite.resources[name]
-                        name = [resource.name, str(source.kind)]
+                        name: list[str] = [str(resource.name), str(source.kind)]
                         if source.metadata.namespace:
                             name.append(str(source.metadata.namespace))
                         name.append(str(source.observed.metadata.name))
@@ -322,7 +344,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                                 usage.kind = "ClusterUsage"
                     for key, dependencies in requireds.items():
                         source = composite.requireds[key[0]][key[1]]
-                        name = [resource.name, str(source.kind)]
+                        name: list[str] = [str(resource.name), str(source.kind)]
                         if source.metadata.namespace:
                             name.append(str(source.metadata.namespace))
                         name.append(str(source.metadata.name))
@@ -358,10 +380,10 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                             else:
                                 usage.kind = "ClusterUsage"
 
-    def process_unknowns(self, composite):
-        unknownResources = []
-        warningResources = []
-        fatalResources = []
+    def process_unknowns(self, composite: BaseComposite) -> None:
+        unknownResources: list[str] = []
+        warningResources: list[str] = []
+        fatalResources: list[str] = []
         for name, resource in sorted(entry for entry in composite.resources):
             unknowns = resource.desired._getUnknowns
             if unknowns:
@@ -429,8 +451,8 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         if result:
             result(reason, message)
 
-    def trimFullName(self, name):
-        name = name.split(".")
+    def trimFullName(self, name: str) -> str:
+        name: list[str] = name.split(".")
         for values in (
             ("request", "observed", "composite", "resource"),
             ("response", "desired", "composite", "resource"),
@@ -468,8 +490,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         return ".".join(name)
 
 
-def ordinal(ix):
-    ix = int(ix)
+def ordinal(ix: int) -> str:
     if 11 <= (ix % 100) <= 13:
         suffix = "th"
     else:

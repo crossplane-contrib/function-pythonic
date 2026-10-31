@@ -1,4 +1,5 @@
 import datetime
+from collections.abc import Mapping
 
 import yaml
 from google.protobuf.struct_pb2 import ListValue, Struct
@@ -18,6 +19,16 @@ def _yaml_clean(values):
     elif isinstance(values, datetime.datetime):
         values = values.isoformat().replace("+00:00", "Z")
     return values
+
+
+def struct(**fields) -> Struct:
+    s = Struct()
+    s.update(fields)
+    return s
+
+
+def mapping(**fields) -> Mapping:
+    return fields
 
 
 def message_merge(message, values):

@@ -2,8 +2,12 @@ import base64
 import logging
 import pathlib
 import sys
+import typing
 
+import grpc
 import kopf
+
+from . import function
 
 GRPC_SERVER = None
 GRPC_RUNNER = None
@@ -13,15 +17,15 @@ PACKAGE_LABELS = {PACKAGE_LABEL: kopf.PRESENT}
 
 
 def operator(
-    grpc_server,
-    grpc_runner,
-    packages_configmaps,
-    packages_secrets,
-    packages_namespaces,
-    packages_environmentconfigs,
-    packages_compositions,
-    packages_dir,
-):
+    grpc_server: grpc.aio.Server,
+    grpc_runner: function.FunctionRunner,
+    packages_configmaps: bool,
+    packages_secrets: bool,
+    packages_namespaces: list[str],
+    packages_environmentconfigs: bool,
+    packages_compositions: bool,
+    packages_dir: str,
+) -> typing.Coroutine:
     logging.getLogger("kopf.objects").setLevel(logging.INFO)
     global GRPC_SERVER, GRPC_RUNNER, PACKAGES_DIR
     GRPC_SERVER = grpc_server
@@ -44,7 +48,7 @@ def operator(
     )
 
 
-def on_resource(group, version, plural):
+def on_resource(group: str, version: str, plural: str):
     kopf.on.create(group, version, plural, labels=PACKAGE_LABELS)(create)
     kopf.on.resume(group, version, plural, labels=PACKAGE_LABELS)(create)
     kopf.on.update(group, version, plural, labels=PACKAGE_LABELS)(update)
@@ -52,25 +56,26 @@ def on_resource(group, version, plural):
 
 
 @kopf.on.startup()
-async def startup(settings, **_):
+async def startup(settings: kopf.OperatorSettings, **_: typing.Any) -> None:
     settings.scanning.disabled = True
 
 
 @kopf.on.cleanup()
-async def cleanup(**_):
-    await GRPC_SERVER.stop(5)
+async def cleanup(**_: typing.Any) -> None:
+    if GRPC_SERVER:
+        await GRPC_SERVER.stop(5)
 
 
-async def create(resource, labels, body, logger, **_):
+async def create(resource, labels, body, logger, **_: typing.Any):
     resource_create(resource, labels, "Created", body, logger)
 
 
-async def update(resource, labels, body, old, logger, **_):
+async def update(resource, labels, body, old, logger, **_: typing.Any):
     resource_delete(resource, labels, "Removed", old, logger)
     resource_create(resource, labels, "Added", body, logger)
 
 
-async def delete(resource, labels, body, logger, **_):
+async def delete(resource, labels, body, logger, **_: typing.Any):
     resource_delete(resource, labels, "Deleted", body, logger)
 
 
@@ -141,7 +146,8 @@ def package_create(resource, action, package_dir, package, logger):
                     package_name.write_text(value)
                 module, name = package_file_name(package_name)
                 if module:
-                    GRPC_RUNNER.invalidate_module(name)
+                    if GRPC_RUNNER:
+                        GRPC_RUNNER.invalidate_module(name)
                     logger.info(f"{action} module: {name}")
                 else:
                     logger.info(f"{action} file: {name}")
@@ -157,7 +163,8 @@ def package_delete(action, package_dir, package, logger):
                 package_name.unlink(missing_ok=True)
                 module, name = package_file_name(package_name)
                 if module:
-                    GRPC_RUNNER.invalidate_module(name)
+                    if GRPC_RUNNER:
+                        GRPC_RUNNER.invalidate_module(name)
                     logger.info(f"{action} module: {name}")
                 else:
                     logger.info(f"{action} file: {name}")
@@ -170,7 +177,8 @@ def package_delete(action, package_dir, package, logger):
                     parent.rmdir()
                     module = str(parent.relative_to(PACKAGES_DIR)).replace("/", ".")
                     if module != ".":
-                        GRPC_RUNNER.invalidate_module(module)
+                        if GRPC_RUNNER:
+                            GRPC_RUNNER.invalidate_module(module)
                         logger.info(f"{action} package: {module}")
                     parent = parent.parent
             elif isinstance(value, dict):

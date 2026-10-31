@@ -21,12 +21,16 @@ from . import (
 
 
 def main():
-    parser = argparse.ArgumentParser("Crossplane Function Pythonic")
-    subparsers = parser.add_subparsers(title="Command", metavar="")
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(
+        "Crossplane Function Pythonic"
+    )
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser] = (
+        parser.add_subparsers(title="Command", metavar="")
+    )
     grpc.Command.create(subparsers)
     render.Command.create(subparsers)
     version.Command.create(subparsers)
-    args = parser.parse_args()
+    args: argparse.Namespace = parser.parse_args()
     if not hasattr(args, "command"):
         parser.print_help()
         sys.exit(1)

@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import logging
 import os
@@ -23,7 +24,7 @@ class Command(command.Command):
     help = "Run function-pythonic gRPC server"
 
     @classmethod
-    def add_parser_arguments(cls, parser):
+    def add_parser_arguments(cls, parser: argparse.ArgumentParser) -> None:
         cls.add_function_arguments(parser)
         parser.add_argument(
             "--address",
@@ -86,7 +87,7 @@ class Command(command.Command):
             help="Pip install command to install additional Python packages.",
         )
 
-    def initialize(self):
+    def initialize(self) -> None:
         if not self.args.tls_certs_dir and not self.args.insecure:
             print(
                 "Either --tls-certs-dir or --insecure must be specified",
@@ -114,7 +115,7 @@ class Command(command.Command):
         # enables read only volumes or mismatched uid volumes
         sys.dont_write_bytecode = True
 
-    async def run(self):
+    async def run(self) -> None:
         grpc.aio.init_grpc_aio()
         grpc_runner = function.FunctionRunner(
             self.args.render_unknowns, self.args.crossplane_v1

@@ -1,4 +1,3 @@
-
 unhandled:
   resource:
     apiVersion: test/v1
@@ -11,8 +10,8 @@ condition-ready:
     kind: Ready
     status:
       conditions:
-      - type: Ready
-        status: 'True'
+        - type: Ready
+          status: "True"
   ready: true
 
 condition-not-ready:
@@ -21,8 +20,8 @@ condition-not-ready:
     kind: Ready
     status:
       conditions:
-      - type: Ready
-        status: 'False'
+        - type: Ready
+          status: "False"
   ready: null
 
 cluster-role:
@@ -58,8 +57,8 @@ cron-job-last-execution-succeeded:
     spec:
       suspend: false
     status:
-      lastScheduleTime:   '2024-01-01T10:00:00Z'
-      lastSuccessfulTime: '2024-01-01T10:05:00Z'
+      lastScheduleTime: "2024-01-01T10:00:00Z"
+      lastSuccessfulTime: "2024-01-01T10:05:00Z"
   ready: true
 
 cron-job-is-active:
@@ -69,9 +68,9 @@ cron-job-is-active:
     spec:
       suspend: false
     status:
-      lastScheduleTime: '2024-01-01T10:00:00Z'
+      lastScheduleTime: "2024-01-01T10:00:00Z"
       active:
-      - name: job-1
+        - name: job-1
   ready: true
 
 cron-job-last-execution-failed:
@@ -81,8 +80,8 @@ cron-job-last-execution-failed:
     spec:
       suspend: false
     status:
-      lastScheduleTime:   '2024-01-01T10:05:00Z'
-      lastSuccessfulTime: '2024-01-01T10:00:00Z'
+      lastScheduleTime: "2024-01-01T10:05:00Z"
+      lastSuccessfulTime: "2024-01-01T10:00:00Z"
   ready: null
 
 cron-job-never-succeeded:
@@ -92,7 +91,7 @@ cron-job-never-succeeded:
     spec:
       suspend: false
     status:
-      lastScheduleTime: '2024-01-01T10:00:00Z'
+      lastScheduleTime: "2024-01-01T10:00:00Z"
   ready: null
 
 cron-job-not-yet-scheduled:
@@ -109,9 +108,9 @@ daemonset-all-pods-scheduled-and-ready:
     kind: DaemonSet
     status:
       desiredNumberScheduled: 5
-      numberReady:            5
+      numberReady: 5
       updatedNumberScheduled: 5
-      numberAvailable:        5
+      numberAvailable: 5
   ready: true
 
 daemonset-pods-not-ready:
@@ -120,9 +119,9 @@ daemonset-pods-not-ready:
     kind: DaemonSet
     status:
       desiredNumberScheduled: 5
-      numberReady:            4
+      numberReady: 4
       updatedNumberScheduled: 5
-      numberAvailable:        5
+      numberAvailable: 5
   ready: null
 
 daemonset-update-in-progress:
@@ -131,9 +130,9 @@ daemonset-update-in-progress:
     kind: DaemonSet
     status:
       desiredNumberScheduled: 5
-      numberReady:            5
+      numberReady: 5
       updatedNumberScheduled: 4
-      numberAvailable:        5
+      numberAvailable: 5
   ready: null
 
 daemonset-pods-not-available:
@@ -142,9 +141,9 @@ daemonset-pods-not-available:
     kind: DaemonSet
     status:
       desiredNumberScheduled: 5
-      numberReady:            5
+      numberReady: 5
       updatedNumberScheduled: 5
-      numberAvailable:        4
+      numberAvailable: 4
   ready: null
 
 daemonset-no-status:
@@ -163,8 +162,8 @@ deployment-all-replicas-ready:
       updatedReplicas: 3
       availableReplicas: 3
       conditions:
-      - type: Available
-        status: 'True'
+        - type: Available
+          status: "True"
   ready: true
 
 deployment-replicas-not-updated:
@@ -177,8 +176,8 @@ deployment-replicas-not-updated:
       updatedReplicas: 2
       availableReplicas: 3
       conditions:
-      - type: Available
-        status: 'True'
+        - type: Available
+          status: "True"
   ready: null
 
 deployment-replicas-not-available:
@@ -191,8 +190,8 @@ deployment-replicas-not-available:
       updatedReplicas: 3
       availableReplicas: 2
       conditions:
-      - type: Available
-        status: 'True'
+        - type: Available
+          status: "True"
   ready: null
 
 deployment-available-condition-false:
@@ -205,8 +204,8 @@ deployment-available-condition-false:
       updatedReplicas: 3
       availableReplicas: 3
       conditions:
-      - type: Available
-        status: 'False'
+        - type: Available
+          status: "False"
   ready: null
 
 deployment-replicas-no-status:
@@ -225,8 +224,8 @@ deployment-default-replicas-1:
       updatedReplicas: 1
       availableReplicas: 1
       conditions:
-      - type: Available
-        status: 'True'
+        - type: Available
+          status: "True"
   ready: True
 
 hpa-scaling-active:
@@ -235,8 +234,8 @@ hpa-scaling-active:
     kind: HorizontalPodAutoscaler
     status:
       conditions:
-      - type: ScalingActive
-        status: 'True'
+        - type: ScalingActive
+          status: "True"
   ready: true
 
 hpa-scaling-limited:
@@ -245,8 +244,8 @@ hpa-scaling-limited:
     kind: HorizontalPodAutoscaler
     status:
       conditions:
-      - type: ScalingLimited
-        status: 'True'
+        - type: ScalingLimited
+          status: "True"
   ready: true
 
 hpa-failed-get-scale:
@@ -255,12 +254,12 @@ hpa-failed-get-scale:
     kind: HorizontalPodAutoscaler
     status:
       conditions:
-      - type: ScalingActive
-        status: 'True'
-      - type: ScalingLimited
-        status: 'True'
-      - type: FailedGetScale
-        status: 'True'
+        - type: ScalingActive
+          status: "True"
+        - type: ScalingLimited
+          status: "True"
+        - type: FailedGetScale
+          status: "True"
   ready: null
 
 hpa-failed-update-scale:
@@ -269,12 +268,12 @@ hpa-failed-update-scale:
     kind: HorizontalPodAutoscaler
     status:
       conditions:
-      - type: ScalingActive
-        status: 'True'
-      - type: ScalingLimited
-        status: 'True'
-      - type: FailedUpdateScale
-        status: 'True'
+        - type: ScalingActive
+          status: "True"
+        - type: ScalingLimited
+          status: "True"
+        - type: FailedUpdateScale
+          status: "True"
   ready: null
 
 hpa-failed-get-resource-metric:
@@ -283,12 +282,12 @@ hpa-failed-get-resource-metric:
     kind: HorizontalPodAutoscaler
     status:
       conditions:
-      - type: ScalingActive
-        status: 'True'
-      - type: ScalingLimited
-        status: 'True'
-      - type: FailedGetResourceMetric
-        status: 'True'
+        - type: ScalingActive
+          status: "True"
+        - type: ScalingLimited
+          status: "True"
+        - type: FailedGetResourceMetric
+          status: "True"
   ready: null
 
 hpa-failed-invalid-selector:
@@ -297,12 +296,12 @@ hpa-failed-invalid-selector:
     kind: HorizontalPodAutoscaler
     status:
       conditions:
-      - type: ScalingActive
-        status: 'True'
-      - type: ScalingLimited
-        status: 'True'
-      - type: InvalidSelector
-        status: 'True'
+        - type: ScalingActive
+          status: "True"
+        - type: ScalingLimited
+          status: "True"
+        - type: InvalidSelector
+          status: "True"
   ready: null
 
 hpa-failed-no-conditions:
@@ -318,7 +317,7 @@ ingress-loadbalancer-assigned:
     status:
       loadBalancer:
         ingress:
-        - ip: 1.2.3.4
+          - ip: 1.2.3.4
   ready: true
 
 ingress-hostname-assigned:
@@ -328,7 +327,7 @@ ingress-hostname-assigned:
     status:
       loadBalancer:
         ingress:
-        - hostname: example.com
+          - hostname: example.com
   ready: true
 
 ingress-no-loadbalancer:
@@ -351,8 +350,8 @@ job-completed:
     kind: Job
     status:
       conditions:
-      - type: Complete
-        status: 'True'
+        - type: Complete
+          status: "True"
   ready: true
 
 job-failed:
@@ -361,10 +360,10 @@ job-failed:
     kind: Job
     status:
       conditions:
-      - type: Complete
-        status: 'True'
-      - type: Failed
-        status: 'True'
+        - type: Complete
+          status: "True"
+        - type: Failed
+          status: "True"
   ready: null
 
 job-suspended:
@@ -373,10 +372,10 @@ job-suspended:
     kind: Job
     status:
       conditions:
-      - type: Complete
-        status: 'True'
-      - type: Suspended
-        status: 'True'
+        - type: Complete
+          status: "True"
+        - type: Suspended
+          status: "True"
   ready: null
 
 job-no-conditions:
@@ -392,8 +391,8 @@ job-complete-false:
     kind: Job
     status:
       conditions:
-      - type: Complete
-        status: 'False'
+        - type: Complete
+          status: "False"
   ready: null
 
 namespace:
@@ -441,8 +440,8 @@ pod-running-and-ready:
     status:
       phase: Running
       conditions:
-      - type: Ready
-        status: 'True'
+        - type: Ready
+          status: "True"
   ready: true
 
 pod-succeeded:
@@ -484,9 +483,9 @@ pod-image-pull-back-off:
     status:
       phase: Running
       containerStatuses:
-      - state:
-          waiting:
-            reason: ImagePullBackOff
+        - state:
+            waiting:
+              reason: ImagePullBackOff
   ready: null
 
 pod-crash-loop-back-off:
@@ -498,9 +497,9 @@ pod-crash-loop-back-off:
     status:
       phase: Running
       containerStatuses:
-      - state:
-          waiting:
-            reason: CrashLoopBackOff
+        - state:
+            waiting:
+              reason: CrashLoopBackOff
   ready: null
 
 pod-running-with-on-failure:
@@ -515,7 +514,7 @@ pod-running-with-on-failure:
 
 replicaset-all-replicas-available:
   resource:
-    apiVersion: v1
+    apiVersion: apps/v1
     kind: ReplicaSet
     metadata:
       generation: 2
@@ -528,7 +527,7 @@ replicaset-all-replicas-available:
 
 replicaset-observed-generation-mismatch:
   resource:
-    apiVersion: v1
+    apiVersion: apps/v1
     kind: ReplicaSet
     metadata:
       generation: 3
@@ -541,7 +540,7 @@ replicaset-observed-generation-mismatch:
 
 replicaset-replica-failure:
   resource:
-    apiVersion: v1
+    apiVersion: apps/v1
     kind: ReplicaSet
     metadata:
       generation: 1
@@ -551,13 +550,13 @@ replicaset-replica-failure:
       observedGeneration: 1
       availableReplicas: 3
       conditions:
-      - type: ReplicaFailure
-        status: 'True'
+        - type: ReplicaFailure
+          status: "True"
   ready: null
 
 replicaset-not-enough-available-replicas:
   resource:
-    apiVersion: v1
+    apiVersion: apps/v1
     kind: ReplicaSet
     metadata:
       generation: 1
@@ -570,7 +569,7 @@ replicaset-not-enough-available-replicas:
 
 replicaset-default-replicas-1:
   resource:
-    apiVersion: v1
+    apiVersion: apps/v1
     kind: ReplicaSet
     metadata:
       generation: 1
@@ -607,7 +606,7 @@ service-ingress-assigned:
     status:
       loadBalancer:
         ingress:
-        - ip: 1.2.3.4
+          - ip: 1.2.3.4
   ready: true
 
 service-no-ingress:
@@ -642,7 +641,7 @@ service-default:
     kind: Service
   ready: true
 
-secret:
+service-account:
   resource:
     apiVersion: v1
     kind: ServiceAccount
@@ -658,7 +657,7 @@ statefulset-all-replicas-ready:
       readyReplicas: 3
       currentReplicas: 3
       currentRevision: myapp-5d8f9c7b
-      updateRevision:  myapp-5d8f9c7b
+      updateRevision: myapp-5d8f9c7b
   ready: true
 
 statefulset-replicas-not-ready:
@@ -671,7 +670,7 @@ statefulset-replicas-not-ready:
       readyReplicas: 2
       currentReplicas: 3
       currentRevision: myapp-5d8f9c7b
-      updateRevision:  myapp-5d8f9c7b
+      updateRevision: myapp-5d8f9c7b
   ready: null
 
 statefulset-replicas-update-in-progress:
@@ -684,7 +683,7 @@ statefulset-replicas-update-in-progress:
       readyReplicas: 2
       currentReplicas: 3
       currentRevision: myapp-5d8f9c7b
-      updateRevision:  myapp-6e9g0d8c
+      updateRevision: myapp-6e9g0d8c
   ready: null
 
 statefulset-wrong-current-replicas:
@@ -697,7 +696,7 @@ statefulset-wrong-current-replicas:
       readyReplicas: 3
       currentReplicas: 2
       currentRevision: myapp-5d8f9c7b
-      updateRevision:  myapp-5d8f9c7b
+      updateRevision: myapp-5d8f9c7b
   ready: null
 
 statefulset-no-status:
@@ -716,5 +715,5 @@ statefulset-default-replicas-1:
       readyReplicas: 1
       currentReplicas: 1
       currentRevision: myapp-5d8f9c7b
-      updateRevision:  myapp-5d8f9c7b
+      updateRevision: myapp-5d8f9c7b
   ready: true
