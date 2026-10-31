@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import importlib
 import inspect
@@ -5,10 +6,13 @@ import json
 import logging
 import pathlib
 import sys
+import typing
+from typing import cast
 
 import inflect
 import kr8s
 import yaml
+from kr8s._api import Api
 
 from . import (
     command,
@@ -27,7 +31,7 @@ class Command(command.Command):
     help = "Render a function-pythonic Composition"
 
     @classmethod
-    def add_parser_arguments(cls, parser):
+    def add_parser_arguments(cls, parser: argparse.ArgumentParser) -> None:
         cls.add_function_arguments(parser)
         parser.add_argument(
             "composite",
@@ -113,16 +117,16 @@ class Command(command.Command):
             help="Include the context in the rendered output as a resource of kind: Context.",
         )
 
-    def initialize(self):
-        if self.args:
+    def initialize(self) -> None:
+        if vars(self.args):
             self.initialize_function()
         self.logger = logging.getLogger(__name__)
 
-    async def run(self):
+    async def run(self) -> None:
         if self.args.kube_context:
-            api = await kr8s.asyncio.api(context=self.args.kube_context)
+            api: Api | None = await kr8s.asyncio.api(context=self.args.kube_context)
         else:
-            api = None
+            api: Api | None = None
         composite = await self.setup_composite(api)
         observed = self.collect_resources(self.args.observed_resources)
         composition = await self.setup_composition(composite, api)
@@ -180,13 +184,14 @@ class Command(command.Command):
             print("---")
             print(str(render.context), end="")
 
-    async def setup_composite(self, api=None):
+    async def setup_composite(self, api=Api | None) -> protobuf.Value:
         # Obtain the Composite to render.
         if self.args.composite.is_file():
-            return protobuf.Yaml(self.args.composite.read_text())
+            return cast(protobuf.Value, protobuf.Yaml(self.args.composite.read_text()))
         if not api:
             print(f'Composite "{self.args.composite}" is not a file', file=sys.stderr)
             sys.exit(1)
+            return
         composite = str(self.args.composite).split(":")
         if len(composite) == 3:
             namespace = None
@@ -202,14 +207,16 @@ class Command(command.Command):
             )
             sys.exit(1)
         composite = await self.kr8s_get(
-            api, composite[0], composite[1], namespace, composite[-1]
+            cast(Api, api), composite[0], composite[1], namespace, composite[-1]
         )
         if not composite:
             print(f'Composite "{self.args.composite}" not found', file=sys.stderr)
             sys.exit(1)
         return composite
 
-    async def setup_composition(self, composite, api=None):
+    async def setup_composition(
+        self, composite: protobuf.Value, api: Api | None = None
+    ) -> protobuf.Value | None:
         # Obtain the Composition that will be used to render the Composite.
         if not self.args.composition:
             return None
@@ -217,7 +224,7 @@ class Command(command.Command):
             composition = self.args.composition.read_text()
             if self.args.composition.suffix == ".py":
                 return self.create_composition(composite, composition)
-            composition = protobuf.Yaml(composition)
+            composition = cast(protobuf.Value, protobuf.Yaml(composition))
             if not len(composition.spec.pipeline):
                 print(
                     f"Composition file does not contain any pipeline steps: {self.args.composition}",
@@ -262,7 +269,9 @@ class Command(command.Command):
             sys.exit(1)
         return self.create_composition(composite, self.args.composition)
 
-    def create_composition(self, composite, module=""):
+    def create_composition(
+        self, composite: protobuf.Value, module: str = ""
+    ) -> protobuf.Value:
         composition = protobuf.Map()
         composition.apiVersion = "apiextensions.crossplane.io/v1"
         composition.kind = "Composition"
@@ -279,7 +288,7 @@ class Command(command.Command):
         composition.spec.pipeline[0].input.composite = str(module)
         return composition
 
-    def collect_resources(self, entries):
+    def collect_resources(self, entries: list[pathlib.Path]) -> list[protobuf.Value]:
         resources = []
         for entry in entries:
             if entry.is_file():
@@ -299,7 +308,7 @@ class Command(command.Command):
         resources.sort(key=lambda resource: str(resource.metadata.name))
         return resources
 
-    def collect_schemas(self, entries):
+    def collect_schemas(self, entries: list[pathlib.Path]) -> list[protobuf.Value]:
         schemas = []
         for entry in entries:
             if entry.is_file():
@@ -318,7 +327,7 @@ class Command(command.Command):
                 sys.exit(1)
         return schemas
 
-    def setup_context(self):
+    def setup_context(self) -> protobuf.Value:
         # Load the request context with any specified command line options.
         context = protobuf.Map()
         for entry in self.args.context_files:
@@ -341,17 +350,17 @@ class Command(command.Command):
 
     async def render(
         self,
-        composite,
-        observed=None,
-        composition=None,
-        resources=None,
-        schemas=None,
-        context=None,
-        api=None,
-        render_unknowns=False,
-        crossplane_v1=False,
-        composite_observeds=False,
-    ):
+        composite: protobuf.Value,
+        observed: list[protobuf.Value] | None = None,
+        composition: protobuf.Value | None = None,
+        resources: list[protobuf.Value] | None = None,
+        schemas: list[protobuf.Value] | None = None,
+        context: protobuf.Value | None = None,
+        api: Api | None = None,
+        render_unknowns: bool = False,
+        crossplane_v1: bool = False,
+        composite_observeds: bool = False,
+    ) -> protobuf.Value | None:
         # Create the request used when running Composition steps.
         if schemas is None:
             schemas = []
@@ -369,7 +378,9 @@ class Command(command.Command):
             request.context = context
 
         # Establish the request observed composite.
-        await self.set_resource(composite, request.observed.composite, resources, api)
+        await self.set_resource(
+            composite, cast(protobuf.Value, request.observed.composite), resources, api
+        )
         # Establish the manually configured observed resources.
         if observed:
             async with asyncio.TaskGroup() as group:
@@ -381,7 +392,7 @@ class Command(command.Command):
                         group.create_task(
                             self.set_resource(
                                 resource,
-                                request.observed.resources[name],
+                                cast(protobuf.Value, request.observed.resources[name]),
                                 resources,
                                 api,
                             )
@@ -490,33 +501,48 @@ class Command(command.Command):
                     await self.set_required(
                         requirement.requirementName,
                         requirement,
-                        request.required_resources,
+                        cast(protobuf.MapMessage, request.required_resources),
                         resources,
                         api,
                     )
                 # Fetch the required resources requested.
                 for name, selector in requirements.resources:
                     await self.set_required(
-                        name, selector, request.required_resources, resources, api
+                        name,
+                        selector,
+                        cast(protobuf.MapMessage, request.required_resources),
+                        resources,
+                        api,
                     )
                 # Fetch the now deprecated extra resources requested.
                 request.extra_resources()
                 for name, selector in requirements.extra_resources:
                     await self.set_required(
-                        name, selector, request.extra_resources, resources, api
+                        name,
+                        selector,
+                        cast(protobuf.MapMessage, request.extra_resources),
+                        resources,
+                        api,
                     )
                 # Fetch the schemas requested.
                 request.required_schemas()
                 for name, selector in requirements.schemas:
                     await self.set_schema(
-                        name, selector, request.required_schemas, schemas, api
+                        name,
+                        selector,
+                        cast(protobuf.MapMessage, request.required_schemas),
+                        schemas,
+                        api,
                     )
                 # Run the step using the function-pythonic function runner.
                 response = protobuf.Message(
                     None,
                     "response",
                     fnv1.RunFunctionResponse.DESCRIPTOR,
-                    await runner.RunFunction(request._message, None),
+                    await runner.RunFunction(
+                        cast(fnv1.RunFunctionRequest, request._message),
+                        None,
+                    ),
                 )
                 # Copy the response context to the request context to use in subsequent steps.
                 request.context = response.context
@@ -535,9 +561,14 @@ class Command(command.Command):
 
             # Copy the response desired state to the request desired state to use in subsequent steps.
             request.desired.resources()
-            self.copy_resource(response.desired.composite, request.desired.composite)
+            self.copy_resource(
+                cast(protobuf.Message, response.desired.composite),
+                cast(protobuf.Message, request.desired.composite),
+            )
             for name, resource in response.desired.resources:
-                self.copy_resource(resource, request.desired.resources[name])
+                self.copy_resource(
+                    resource, cast(protobuf.Message, request.desired.resources[name])
+                )
 
             # Collect the step's returned conditions.
             for condition in response.conditions:
@@ -565,8 +596,8 @@ class Command(command.Command):
                 break
 
         # Collect and format all the returned desired composed resources.
-        resources = protobuf.List()
-        unready = protobuf.List()
+        resources: protobuf.Value = protobuf.List()
+        unready: protobuf.Value = protobuf.List()
         prefix = composite.metadata.labels["crossplane.io/composite"]
         if not prefix:
             prefix = composite.metadata.name
@@ -580,7 +611,9 @@ class Command(command.Command):
             if not ready:
                 unready[protobuf.append] = name
             resource = resource.resource
-            observed = request.observed.resources[name].resource
+            observed: protobuf.Value = cast(
+                protobuf.Value, request.observed.resources[name].resource
+            )
             if observed:
                 for key in ("namespace", "generateName", "name"):
                     if observed.metadata[key]:
@@ -666,7 +699,14 @@ class Command(command.Command):
                 response.observed[name] = resource.resource
         return response
 
-    async def get_composite_ref(self, composite, ref, request, resources, api):
+    async def get_composite_ref(
+        self,
+        composite: protobuf.Value,
+        ref: protobuf.Value,
+        request: protobuf.Message,
+        resources: list[protobuf.Value],
+        api: Api,
+    ) -> None:
         namespace = ref.namespace
         if not namespace:
             namespace = composite.metadata.namespace
@@ -680,9 +720,18 @@ class Command(command.Command):
             if name:
                 destination = request.observed.resources[name]
                 if not destination:  # Do not override manual observed
-                    await self.set_resource(source, destination, resources, api)
+                    await self.set_resource(
+                        source, cast(protobuf.Value, destination), resources, api
+                    )
 
-    async def set_required(self, name, selector, requireds, resources=None, api=None):
+    async def set_required(
+        self,
+        name: protobuf.TypeString,
+        selector: protobuf.Value,
+        requireds: protobuf.MapMessage,
+        resources: list[protobuf.Value] | None = None,
+        api: Api | None = None,
+    ) -> None:
         if resources is None:
             resources = []
         if not name:
@@ -739,7 +788,13 @@ class Command(command.Command):
                         resource, items[protobuf.append], resources, api
                     )
 
-    async def set_resource(self, source, destination, resources=None, api=None):
+    async def set_resource(
+        self,
+        source: protobuf.Value,
+        destination: protobuf.Value,
+        resources: list[protobuf.Value] | None = None,
+        api: Api | None = None,
+    ) -> None:
         if resources is None:
             resources = []
         destination.resource = source
@@ -769,7 +824,14 @@ class Command(command.Command):
                 for key, value in connection.data:
                     destination.connection_details[key] = protobuf.B64Decode(value)
 
-    async def set_schema(self, name, selector, schemas, documents=None, api=None):
+    async def set_schema(
+        self,
+        name: protobuf.TypeString,
+        selector: protobuf.Value,
+        schemas: protobuf.MapMessage,
+        documents: list[protobuf.Value] | None = None,
+        api: Api | None = None,
+    ) -> None:
         if documents is None:
             documents = []
         if not name:
@@ -801,7 +863,9 @@ class Command(command.Command):
                 return
             self.find_schema(gvk, document, schema)
 
-    def find_schema(self, gvk, document, schema):
+    def find_schema(
+        self, gvk: protobuf.Value, document: protobuf.Value, schema: protobuf.Value
+    ) -> bool:
         for name, s in document.components.schemas:
             gvks = s["x-kubernetes-group-version-kind"]
             if len(gvks) == 1 and gvks[0] == gvk:
@@ -811,20 +875,23 @@ class Command(command.Command):
                 return True
         return False
 
-    def resolve_ref(self, document, visiting, ref, schema):
+    def resolve_ref(
+        self,
+        document: protobuf.Value,
+        visiting: set,
+        ref: protobuf.TypeString,
+        schema: protobuf.Value,
+    ) -> None:
         if not ref:
             return
         ref = str(ref)
         if ref in visiting:
             return
-        d = None
-        for segment in ref.split("/"):
-            if segment == "#":
-                d = document
-            else:
-                d = d[segment]
-        if not d:
+        if not ref.startswith("#?"):
             return
+        d = document
+        for segment in ref.split("/")[1:]:
+            d = d[segment]
         visiting.add(ref)
         try:
             for name, value in d:
@@ -832,7 +899,14 @@ class Command(command.Command):
         finally:
             visiting.remove(ref)
 
-    def copy_schema(self, document, visiting, key, value, schema):
+    def copy_schema(
+        self,
+        document: protobuf.Value,
+        visiting: set,
+        key: str | int,
+        value: protobuf.Value,
+        schema: protobuf.Value,
+    ) -> None:
         if key == "$ref":
             self.resolve_ref(document, visiting, value, schema)
         elif key == "allOf":
@@ -850,29 +924,37 @@ class Command(command.Command):
             else:
                 schema[key] = value
 
-    def copy_resource(self, source, destination):
+    def copy_resource(
+        self, source: protobuf.Message, destination: protobuf.Message
+    ) -> None:
         destination.resource = source.resource
         destination.connection_details()
         for key, value in source.connection_details:
             destination.connection_details[key] = value
         destination.ready = source.ready
 
-    def create_condition(self, type, status, reason, message=None):
+    def create_condition(
+        self,
+        type: str,
+        status: protobuf.FieldMessage | bool | None,
+        reason: str,
+        message: str | None = None,
+    ) -> dict[str, str]:
         if isinstance(status, protobuf.FieldMessage):
             if status._value == fnv1.Status.STATUS_CONDITION_TRUE:
-                status = "True"
+                status: str = "True"
             elif status._value == fnv1.Status.STATUS_CONDITION_FALSE:
-                status = "False"
+                status: str = "False"
             else:
-                status = "Unknown"
+                status: str = "Unknown"
         elif isinstance(status, bool):
             if status:
-                status = "True"
+                status: str = "True"
             else:
-                status = "False"
+                status: str = "False"
         elif status is None:
-            status = "Unknown"
-        condition = {
+            status: str = "Unknown"
+        condition: dict[str, str] = {
             "type": type,
             "status": status,
             "reason": reason,
@@ -882,8 +964,15 @@ class Command(command.Command):
             condition["message"] = message
         return condition
 
-    async def kr8s_get(self, api, kind, apiVersion, namespace, name):
-        namespaced = namespace and len(namespace)
+    async def kr8s_get(
+        self,
+        api: Api,
+        kind: protobuf.TypeString,
+        apiVersion: protobuf.TypeString,
+        namespace: protobuf.TypeString | None,
+        name: protobuf.TypeString,
+    ) -> protobuf.Value | None:
+        namespaced = bool(namespace) and bool(len(namespace))
         clazz = self.kr8s_class(kind, apiVersion, namespaced)
         try:
             fullName = [str(kind), str(apiVersion), str(name)]
@@ -900,15 +989,27 @@ class Command(command.Command):
         self.logger.debug(f"Resource {result}: {':'.join(fullName)}")
         return resource
 
-    async def kr8s_list(self, api, kind, apiVersion, namespace, labelSelector):
-        namespaced = namespace and len(namespace)
+    async def kr8s_list(
+        self,
+        api: Api,
+        kind: protobuf.TypeString,
+        apiVersion: protobuf.TypeString,
+        namespace: protobuf.TypeString | None,
+        labelSelector: protobuf.MapMessage,
+    ) -> list[protobuf.Value]:
+        namespaced = bool(namespace) and bool(len(namespace))
         clazz = self.kr8s_class(kind, apiVersion, namespaced)
         resources = [
             protobuf.Value(None, None, resource.raw)
-            async for resource in clazz.list(
-                namespace=str(namespace) if namespaced else None,
-                label_selector={label: str(value) for label, value in labelSelector},
-                api=api,
+            async for resource in cast(
+                typing.AsyncGenerator[kr8s.APIObject],
+                clazz.list(
+                    namespace=str(namespace) if namespaced else None,
+                    label_selector={
+                        label: str(value) for label, value in labelSelector
+                    },
+                    api=api,
+                ),
             )
         ]
         if self.logger.isEnabledFor(logging.DEBUG):
@@ -919,13 +1020,18 @@ class Command(command.Command):
                 "&".join(f"{label}={value}" for label, value in labelSelector)
             )
             if resources:
-                result = f"found {INFLECT.number_to_words(len(resources))}"
+                result = f"found {INFLECT.number_to_words(str(len(resources)))}"
             else:
                 result = "missing"
             self.logger.debug(f"Resources {result}: {':'.join(fullName)}")
         return resources
 
-    def kr8s_class(self, kind, apiVersion, namespaced):
+    def kr8s_class(
+        self,
+        kind: protobuf.TypeString,
+        apiVersion: protobuf.TypeString,
+        namespaced: bool,
+    ) -> type[kr8s.APIObject]:
         try:
             return kr8s.asyncio.objects.get_class(str(kind), str(apiVersion), True)
         except KeyError:

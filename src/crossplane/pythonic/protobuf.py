@@ -19,27 +19,37 @@ import base64
 import datetime
 import json
 import sys
+import typing
 
+import google.protobuf.descriptor
+import google.protobuf.message
 import google.protobuf.struct_pb2
 import yaml
+from google.protobuf.internal.containers import (
+    MessageMap,
+    RepeatedCompositeFieldContainer,
+    RepeatedScalarFieldContainer,
+    ScalarMap,
+)
 
-_Unknown = object()
+type TypeString = str | Value | FieldMessage
+_Unknown = sentinel("_Unknown")
 append = sys.maxsize
 
 
-def Map(**kwargs):
+def Map(**kwargs) -> Value:
     return Value(None, None, kwargs)
 
 
-def List(*args):
+def List(*args) -> Value:
     return Value(None, None, args)
 
 
-def Unknown():
+def Unknown() -> Value:
     return Value(None, None)
 
 
-def Yaml(string, readOnly=None):
+def Yaml(string: TypeString, readOnly: str | bool = False) -> Value | FieldMessage:
     if isinstance(string, (FieldMessage, Value)):
         if not string:
             return string
@@ -47,7 +57,7 @@ def Yaml(string, readOnly=None):
     return Value(None, None, yaml.safe_load(string), readOnly)
 
 
-def YamlAll(string, readOnly=None):
+def YamlAll(string: TypeString, readOnly: str | bool = False) -> Value | FieldMessage:
     if isinstance(string, (FieldMessage, Value)):
         if not string:
             return string
@@ -57,7 +67,7 @@ def YamlAll(string, readOnly=None):
     )
 
 
-def Json(string, readOnly=None):
+def Json(string: TypeString, readOnly: str | bool = False) -> Value | FieldMessage:
     if isinstance(string, (FieldMessage, Value)):
         if not string:
             return string
@@ -65,7 +75,7 @@ def Json(string, readOnly=None):
     return Value(None, None, json.loads(string), readOnly)
 
 
-def B64Encode(string):
+def B64Encode(string: TypeString) -> TypeString:
     if isinstance(string, (FieldMessage, Value)):
         if not string:
             return string
@@ -73,7 +83,7 @@ def B64Encode(string):
     return base64.b64encode(string.encode("utf-8")).decode("utf-8")
 
 
-def B64Decode(string):
+def B64Decode(string: TypeString) -> TypeString:
     if isinstance(string, (FieldMessage, Value)):
         if not string:
             return string
@@ -81,27 +91,84 @@ def B64Decode(string):
     return base64.b64decode(string.encode("utf-8")).decode("utf-8")
 
 
-class Message:
-    def __init__(self, parent, key, descriptor, message=_Unknown, readOnly=False):
-        self._set_attribute("_parent", parent)
-        self._set_attribute("_key", key)
-        self._set_attribute("_descriptor", descriptor)
-        self._set_attribute("_message", message)
-        self._set_attribute("_readOnly", readOnly)
-        self._set_attribute("_cache", {})
-
-    def _set_attribute(self, key, value):
-        self.__dict__[key] = value
-
+class TypeProtobuf:
     def __getattr__(self, key):
-        return self[key]
+        if key not in self.__dict__:
+            raise AttributeError(
+                f"{self.__class__.__name__} attribute does not exist: {key}"
+            )
+        return self.__dict__[key]
 
     def __getitem__(self, key):
+        raise ValueError(f"{self.__class__.__name__} does not have dynamic items")
+
+    def __iter__(self):
+        raise ValueError(f"{self.__class__.__name__} is not iterable")
+
+    def __int__(self):
+        raise ValueError(f"{self.__class__.__name__} is not an integer")
+
+    def __float__(self):
+        raise ValueError(f"{self.__class__.__name__} is not a float")
+
+    def __call__(self, *args, **kwargs):
+        raise ValueError(f"{self.__class__.__name__} is not callable")
+
+    def __setattr__(self, key, value):
+        self.__dict__[key] = value
+
+    def __setitem__(self, key, value):
+        raise ValueError(f"{self.__class__.__name__} does not have dynamic items")
+
+    def __delattr__(self, key):
+        raise ValueError(f"{self.__class__.__name__} does not have dynamic attributes")
+
+    def __delitem__(self, key):
+        raise ValueError(f"{self.__class__.__name__} does not have dynamic items")
+
+    def append(self, value):
+        raise ValueError(f"{self.__class__.__name__} does not have dynamic items")
+
+
+class Message(TypeProtobuf):
+    def __init__(
+        self,
+        parent: Message | MapMessage | RepeatedMessage | None,
+        key: str | int | Value | FieldMessage | None,
+        descriptor: google.protobuf.descriptor.Descriptor,
+        message: google.protobuf.message.Message | _Unknown = _Unknown,
+        readOnly: str | bool = False,
+    ):
+        self._parent: Message | MapMessage | RepeatedMessage | None = parent
+        self._key = key
+        self._descriptor: google.protobuf.descriptor.Descriptor = descriptor
+        self._message: google.protobuf.message.Message | _Unknown = message
+        self._readOnly: str | bool = readOnly
+        self._cache: dict[str, typing.Any] = {}
+
+    def _ensure_message(self):
+        if self._message is _Unknown:
+            if self._parent is None:
+                raise ValueError(
+                    "Messages does not have parent to create internal message"
+                )
+            self._message: google.protobuf.message.Message = self._parent._create_child(
+                self._key
+            )
+
+    def __getattr__(
+        self, key
+    ) -> Message | MapMessage | RepeatedMessage | FieldMessage | Value:
+        return self[key]
+
+    def __getitem__(
+        self, key
+    ) -> Message | MapMessage | RepeatedMessage | FieldMessage | Value:
         key = self._validate_key(key)
         if key in self._cache:
             return self._cache[key]
         field = self._descriptor.fields_by_name.get(key)
-        if not field:
+        if field is None:
             raise AttributeError(obj=self, name=key)
         if self._message is _Unknown:
             value = _Unknown
@@ -112,6 +179,7 @@ class Message:
         if field.is_repeated:
             if (
                 field.type == field.TYPE_MESSAGE
+                and field.message_type
                 and field.message_type.GetOptions().map_entry
             ):
                 value = MapMessage(
@@ -123,7 +191,7 @@ class Message:
                 )
             else:
                 value = RepeatedMessage(self, key, field, value, self._readOnly)
-        elif field.type == field.TYPE_MESSAGE:
+        elif field.type == field.TYPE_MESSAGE and field.message_type:
             if field.message_type.name in ("Struct", "ListValue"):
                 value = Value(self, key, value, self._readOnly)
             else:
@@ -199,23 +267,24 @@ class Message:
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
         key = self._validate_key(key)
-        if self._message is _Unknown:
-            self.__dict__["_message"] = self._parent._create_child(self._key)
+        self._ensure_message()
         return getattr(self._message, key)
 
     def __call__(self, **kwargs):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
-        if self._message is _Unknown:
-            self.__dict__["_message"] = self._parent._create_child(self._key)
-        self._message.Clear()
+        self._ensure_message()
+        typing.cast(google.protobuf.message.Message, self._message).Clear()
         self._cache.clear()
         for key, value in kwargs.items():
             self[key] = value
         return self
 
     def __setattr__(self, key, value):
-        self[key] = value
+        if key in ("_parent", "_key", "_descriptor", "_message", "_readOnly", "_cache"):
+            self.__dict__[key] = value
+        else:
+            self[key] = value
 
     def __setitem__(self, key, value):
         if self._readOnly:
@@ -224,8 +293,7 @@ class Message:
         if key not in self._descriptor.fields_by_name:
             raise AttributeError(obj=self, name=key)
         field = self._descriptor.fields_by_name[key]
-        if self._message is _Unknown:
-            self.__dict__["_message"] = self._parent._create_child(self._key)
+        self._ensure_message()
         if isinstance(value, Message):
             value = value._message
         elif isinstance(value, (MapMessage, RepeatedMessage)):
@@ -262,17 +330,21 @@ class Message:
         return key
 
 
-class MapMessage:
-    def __init__(self, parent, key, field, messages=_Unknown, readOnly=False):
-        self._set_attribute("_parent", parent)
-        self._set_attribute("_key", key)
-        self._set_attribute("_field", field)
-        self._set_attribute("_messages", messages)
-        self._set_attribute("_readOnly", readOnly)
-        self._set_attribute("_cache", {})
-
-    def _set_attribute(self, key, value):
-        self.__dict__[key] = value
+class MapMessage(TypeProtobuf):
+    def __init__(
+        self,
+        parent: Message,
+        key: str,
+        field: google.protobuf.descriptor.FieldDescriptor,
+        messages: ScalarMap | MessageMap | _Unknown = _Unknown,
+        readOnly: str | bool = False,
+    ):
+        self._parent: Message = parent
+        self._key: str = key
+        self._field: google.protobuf.descriptor.FieldDescriptor = field
+        self._messages: ScalarMap | MessageMap | _Unknown = messages
+        self._readOnly = readOnly
+        self._cache: dict[str, typing.Any] = {}
 
     def __getattr__(self, key):
         return self[key]
@@ -287,8 +359,8 @@ class MapMessage:
             value = self._messages[key]
         if value is None and self._field.has_default_value:
             value = self._field.default_value
-        if self._field.type == self._field.TYPE_MESSAGE:
-            if self._field.message_type.name in ("Struct", "ListValue"):
+        if self._field.type == self._field.TYPE_MESSAGE and self._field.message_type:
+            if str(self._field.message_type.name) in ("Struct", "ListValue"):
                 value = Value(self, key, value, self._readOnly)
             else:
                 value = Message(
@@ -329,6 +401,7 @@ class MapMessage:
             return False
         if (
             self._field.type == self._field.TYPE_MESSAGE
+            and self._field.message_type
             and self._field.message_type.full_name
             != other._field.message_type.full_name
         ):
@@ -353,63 +426,63 @@ class MapMessage:
         return _formatObject(self, spec)
 
     def _fullName(self, key=None):
-        if self._key is not None:
-            if self._parent is not None:
-                name = self._parent._fullName(self._key)
-            else:
-                name = str(self._key)
-            if key is not None:
-                if "." in key:
-                    name += f"[{key}]"
-                else:
-                    name += f".{key}"
-            return name
+        name = self._parent._fullName(self._key)
         if key is not None:
-            return str(key)
-        return ""
+            if "." in key:
+                name += f"[{key}]"
+            else:
+                name += f".{key}"
+        return name
 
     def _create_child(self, key):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
         key = self._validate_key(key)
         if self._messages is _Unknown:
-            self.__dict__["_messages"] = self._parent._create_child(self._key)
+            self._messages = self._parent._create_child(self._key)
         return self._messages[key]
 
     def __call__(self, **kwargs):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
         if self._messages is _Unknown:
-            self.__dict__["_messages"] = self._parent._create_child(self._key)
+            self._messages: ScalarMap | MessageMap = self._parent._create_child(
+                self._key
+            )
         self._messages.clear()
         self._cache.clear()
         for key, value in kwargs.items():
             self[key] = value
         return self
 
-    def __setattr__(self, key, message):
-        self[key] = message
+    def __setattr__(self, key, value):
+        if key in ("_parent", "_key", "_field", "_messages", "_readOnly", "_cache"):
+            self.__dict__[key] = value
+        else:
+            self[key] = value
 
-    def __setitem__(self, key, message):
+    def __setitem__(self, key, value):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
         key = self._validate_key(key)
         if self._messages is _Unknown:
-            self._messages = self._parent._create_child(self._key)
-        if isinstance(message, Message):
-            message = message._message
-        elif isinstance(message, (MapMessage, RepeatedMessage)):
-            message = message._messages
-        elif isinstance(message, FieldMessage):
-            message = message._value
-        elif isinstance(message, Value):
-            message = message._raw
-        if message is _Unknown:
+            self._messages: ScalarMap | MessageMap = self._parent._create_child(
+                self._key
+            )
+        if isinstance(value, Message):
+            value = value._message
+        elif isinstance(value, (MapMessage, RepeatedMessage)):
+            value = value._messages
+        elif isinstance(value, FieldMessage):
+            value = value._value
+        elif isinstance(value, Value):
+            value = value._raw
+        if value is _Unknown:
             self._messages.pop(key, None)
         else:
-            if self._field.type == self._field.TYPE_BYTES and isinstance(message, str):
-                message = message.encode("utf-8")
-            self._messages[key] = message
+            if self._field.type == self._field.TYPE_BYTES and isinstance(value, str):
+                value = value.encode("utf-8")
+            self._messages[key] = value
         self._cache.pop(key, None)
 
     def __delattr__(self, key):
@@ -422,7 +495,7 @@ class MapMessage:
         if self._messages is not _Unknown:
             if key in self._messages:
                 del self._messages[key]
-            self._cache.pop(key, None)
+            self._cache.pop(key)
 
     def _validate_key(self, key):
         if isinstance(key, FieldMessage):
@@ -434,14 +507,25 @@ class MapMessage:
         return key
 
 
-class RepeatedMessage:
-    def __init__(self, parent, key, field, messages=_Unknown, readOnly=False):
-        self._parent = parent
-        self._key = key
-        self._field = field
-        self._messages = messages
-        self._readOnly = readOnly
-        self._cache = {}
+class RepeatedMessage(TypeProtobuf):
+    def __init__(
+        self,
+        parent: Message,
+        key: str,
+        field: google.protobuf.descriptor.FieldDescriptor,
+        messages: RepeatedCompositeFieldContainer
+        | RepeatedScalarFieldContainer
+        | _Unknown = _Unknown,
+        readOnly: str | bool = False,
+    ):
+        self._parent: Message = parent
+        self._key: str = key
+        self._field: google.protobuf.descriptor.FieldDescriptor = field
+        self._messages: (
+            RepeatedCompositeFieldContainer | RepeatedScalarFieldContainer | _Unknown
+        ) = messages
+        self._readOnly: str | bool = readOnly
+        self._cache: dict[int, typing.Any] = {}
 
     def __getitem__(self, key):
         key = self._validate_key(key)
@@ -466,7 +550,7 @@ class RepeatedMessage:
                 value = self._messages[key]
         if value is None and self._field.has_default_value:
             value = self._field.default_value
-        if self._field.type == self._field.TYPE_MESSAGE:
+        if self._field.type == self._field.TYPE_MESSAGE and self._field.message_type:
             if self._field.message_type.name in ("Struct", "ListValue"):
                 value = Value(self, key, value, self._readOnly)
             else:
@@ -508,6 +592,7 @@ class RepeatedMessage:
             return False
         if (
             self._field.type == self._field.TYPE_MESSAGE
+            and self._field.message_type
             and self._field.message_type.full_name
             != other._field.message_type.full_name
         ):
@@ -547,27 +632,31 @@ class RepeatedMessage:
             raise ValueError(f"{self._readOnly} is read only")
         key = self._validate_key(key)
         if self._messages is _Unknown:
-            self.__dict__["_messages"] = self._parent._create_child(self._key)
+            self._messages: (
+                RepeatedCompositeFieldContainer | RepeatedScalarFieldContainer
+            ) = self._parent._create_child(self._key)
         if key == append:
             key = len(self._messages)
         elif key < 0:
             key = len(self._messages) + key
         while key >= len(self._messages):
-            self._messages.add()
+            typing.cast(RepeatedCompositeFieldContainer, self._messages).add()
         return self._messages[key]
 
     def __call__(self, *args):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
         if self._messages is _Unknown:
-            self.__dict__["_messages"] = self._parent._create_child(self._key)
+            self._messages: (
+                RepeatedCompositeFieldContainer | RepeatedScalarFieldContainer
+            ) = self._parent._create_child(self._key)
         self._messages.clear()
         self._cache.clear()
         for arg in args:
             self.append(arg)
         return self
 
-    def __setitem__(self, key, message):
+    def __setitem__(self, key, value):
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
         key = self._validate_key(key)
@@ -575,25 +664,25 @@ class RepeatedMessage:
             self._messages = self._parent._create_child(self._key)
         if key < 0:
             key = len(self._messages) + key
-        if isinstance(message, Message):
-            message = message._message
-        elif isinstance(message, (MapMessage, RepeatedMessage)):
-            message = message._messages
-        elif isinstance(message, FieldMessage):
-            message = message._value
-        elif isinstance(message, Value):
-            message = message._raw
-        if message is _Unknown:
+        if isinstance(value, Message):
+            value = value._message
+        elif isinstance(value, (MapMessage, RepeatedMessage)):
+            value = value._messages
+        elif isinstance(value, FieldMessage):
+            value = value._value
+        elif isinstance(value, Value):
+            value = value._raw
+        if value is _Unknown:
             if key < len(self._messages):
                 self._messages.pop(key)
                 self._cache.clear()
         else:
-            if self._field.type == self._field.TYPE_BYTES and isinstance(message, str):
-                message = message.encode("utf-8")
+            if self._field.type == self._field.TYPE_BYTES and isinstance(value, str):
+                value = value.encode("utf-8")
             if key >= len(self._messages):
-                self._messages.append(message)
+                self._messages.append(value)
             else:
-                self._messages[key] = message
+                self._messages[key] = value
             self._cache.pop(key, None)
 
     def __delitem__(self, key):
@@ -604,15 +693,17 @@ class RepeatedMessage:
             del self._messages[key]
             self._cache.pop(key, None)
 
-    def append(self, message=_Unknown):
+    def append(self, value=_Unknown) -> TypeProtobuf:
         if self._readOnly:
             raise ValueError(f"{self._readOnly} is read only")
         if self._messages is _Unknown:
-            self._messages = self._parent._create_child(self._key)
-        if message is _Unknown:
-            message = self._messages.add()
+            self._messages: RepeatedCompositeFieldContainer = (
+                self._parent._create_child(self._key)
+            )
+        if value is _Unknown:
+            typing.cast(RepeatedCompositeFieldContainer, self._messages).add()
         else:
-            message = self._messages.append(message)
+            self._messages.append(value)
         return self[len(self._messages) - 1]
 
     def _validate_key(self, key):
@@ -625,12 +716,18 @@ class RepeatedMessage:
         return key
 
 
-class FieldMessage:
-    def __init__(self, parent, key, kind, value):
-        self._parent = parent
-        self._key = key
-        self._kind = kind
-        self._value = value
+class FieldMessage(TypeProtobuf):
+    def __init__(
+        self,
+        parent: Message | MapMessage | RepeatedMessage,
+        key: str | int,
+        kind: int,
+        value: typing.Any,
+    ):
+        self._parent: Message | MapMessage | RepeatedMessage = parent
+        self._key: str | int = key
+        self._kind: int = kind
+        self._value: typing.Any = value
 
     def __bool__(self):
         return self._value is not _Unknown
@@ -687,20 +784,13 @@ class FieldMessage:
         return float(self._value)
 
     def _fullName(self, key=None):
-        if self._key is not None:
-            if self._parent is not None:
-                name = self._parent._fullName(self._key)
-            else:
-                name = str(self._key)
-            if key is not None:
-                if "." in key:
-                    name += f"[{key}]"
-                else:
-                    name += f".{key}"
-            return name
+        name = self._parent._fullName(self._key)
         if key is not None:
-            return str(key)
-        return ""
+            if "." in key:
+                name += f"[{key}]"
+            else:
+                name += f".{key}"
+        return name
 
 
 class ProtobufValue:
@@ -709,14 +799,20 @@ class ProtobufValue:
         return None
 
 
-class Value:
-    def __init__(self, parent, key, value=_Unknown, readOnly=None):
-        self._set_attribute("_parent", parent)
-        self._set_attribute("_key", key)
-        self._set_attribute("_dependencies", {})
-        self._set_attribute("_unknowns", {})
-        self._set_attribute("_cache", {})
-        self._set_attribute("_readOnly", None)
+class Value(TypeProtobuf):
+    def __init__(
+        self,
+        parent: Message | MapMessage | RepeatedMessage | Value | None,
+        key: str | int | None,
+        value: typing.Any | _Unknown = _Unknown,
+        readOnly: str | bool = False,
+    ):
+        self._parent: Message | MapMessage | RepeatedMessage | Value | None = parent
+        self._key: str | int | None = key
+        self._dependencies: dict[str | int, FieldMessage | Value] = {}
+        self._unknowns: dict[str | int, FieldMessage | Value] = {}
+        self._cache: dict[str | int, Value] = {}
+        self._readOnly: str | bool = False
         if (
             isinstance(
                 value,
@@ -728,11 +824,13 @@ class Value:
             )
             or value is _Unknown
         ):
-            self._set_attribute("_value", value)
+            self._value: typing.Any = value
         else:
-            self._set_attribute("_value", google.protobuf.struct_pb2.Value())
+            self._value: google.protobuf.struct_pb2.Value = (
+                google.protobuf.struct_pb2.Value()
+            )
             if value is None:
-                self._value.null_value = 0
+                self._value.null_value = google.protobuf.struct_pb2.NULL_VALUE
             elif isinstance(value, dict):
                 self._value.struct_value.Clear()
                 for k, v in value.items():
@@ -749,10 +847,7 @@ class Value:
                 self._value.string_value = value
             else:
                 raise ValueError(f"Unexpected Value type: {value.__class__}")
-        self._set_attribute("_readOnly", readOnly)
-
-    def _set_attribute(self, key, value):
-        self.__dict__[key] = value
+        self._readOnly: str | bool = readOnly
 
     def __enter__(self):
         return self
@@ -865,13 +960,13 @@ class Value:
                 for ix in range(len(self._value.list_value.values)):
                     yield self[ix]
                 for ix in sorted(self._unknowns.keys()):
-                    if ix >= len(self._value.list_value.values):
+                    if typing.cast(int, ix) >= len(self._value.list_value.values):
                         yield self[ix]
             case "ListValue":
                 for ix in range(len(self._value.values)):
                     yield self[ix]
                 for ix in sorted(self._unknowns.keys()):
-                    if ix >= len(self._value.values):
+                    if typing.cast(int, ix) >= len(self._value.values):
                         yield self[ix]
 
     def __hash__(self):
@@ -1068,7 +1163,18 @@ class Value:
         return self
 
     def __setattr__(self, key, value):
-        self[key] = value
+        if key in (
+            "_parent",
+            "_key",
+            "_value",
+            "_dependencies",
+            "_unknowns",
+            "_cache",
+            "_readOnly",
+        ):
+            self.__dict__[key] = value
+        else:
+            self[key] = value
 
     def __setitem__(self, key, value):
         if self._readOnly:
@@ -1241,12 +1347,12 @@ class Value:
             for ix in sorted(self._dependencies.keys()):
                 if ix > key:
                     self._cache.pop(ix, None)
-                    self._dependencies[ix - 1] = self._dependences[ix]
+                    self._dependencies[typing.cast(int, ix) - 1] = self._dependences[ix]
                     del self._dependencies[ix]
             for ix in sorted(self._unknowns.keys()):
                 if ix > key:
                     self._cache.pop(ix, None)
-                    self._unknowns[ix - 1] = self._unknowns[ix]
+                    self._unknowns[typing.cast(int, ix) - 1] = self._unknowns[ix]
                     del self._unknowns[ix]
             for ix in reversed(range(len(values.values))):
                 if ix not in self._unknowns:
@@ -1364,8 +1470,8 @@ class Value:
         return unknowns
 
     @property
-    def _getDependencies(self):
-        dependencies = {}
+    def _getDependencies(self) -> dict[str, str]:
+        dependencies: dict[str, str] = {}
         for key, dependency in self._dependencies.items():
             dependencies[self._fullName(key)] = dependency._fullName()
         for key, unknown in self._unknowns.items():
@@ -1437,41 +1543,41 @@ def _formatObject(object, spec="yaml"):
 
 
 class _JSONEncoder(json.JSONEncoder):
-    def default(self, object):
-        if isinstance(object, (Message, MapMessage)):
-            if object:
-                return {key: value for key, value in object}
+    def default(self, o):
+        if isinstance(o, (Message, MapMessage)):
+            if o:
+                return {key: value for key, value in o}
             return None
-        if isinstance(object, RepeatedMessage):
-            if object:
-                return [value for value in object]
+        if isinstance(o, RepeatedMessage):
+            if o:
+                return [value for value in o]
             return None
-        if isinstance(object, FieldMessage):
-            return object._value
-        if isinstance(object, Value):
-            match object._kind:
+        if isinstance(o, FieldMessage):
+            return o._value
+        if isinstance(o, Value):
+            match o._kind:
                 case "struct_value" | "Struc":
-                    return {key: value for key, value in object}
+                    return {key: value for key, value in o}
                 case "list_value" | "ListValue":
-                    return [value for value in object]
+                    return [value for value in o]
                 case "string_value":
-                    return object._value.string_value
+                    return o._value.string_value
                 case "null_value":
                     return None
                 case "number_value":
-                    value = object._value.number_value
+                    value = o._value.number_value
                     if value.is_integer():
                         value = int(value)
                     return value
                 case "bool_value":
-                    return object._value.bool_value
+                    return o._value.bool_value
                 case "Unknown":
                     return "<<UNKNOWN>>"
                 case _:
                     return "<<UNEXPECTED>>"
-        if isinstance(object, datetime.datetime):
-            return object.isoformat()
-        return super().default(object)
+        if isinstance(o, datetime.datetime):
+            return o.isoformat()
+        return super().default(o)
 
 
 class _Dumper(yaml.SafeDumper):
@@ -1492,7 +1598,7 @@ class _Dumper(yaml.SafeDumper):
         if isinstance(field._value, bytes):
             return self.represent_binary(field._value)
         if field._value is None:
-            return self.represent_none()
+            return self.represent_none(field._value)
         if isinstance(field._value, int):
             return self.represent_int(field._value)
         if isinstance(field._value, float):

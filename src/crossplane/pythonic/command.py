@@ -1,27 +1,32 @@
+import argparse
 import logging
 import pathlib
 import sys
 
 
 class Command:
-    name = None
-    command = None
-    description = None
+    name: str | None = None
+    command: str | None = None
+    help: str | None = None
+    description: str | None = None
 
     @classmethod
-    def create(cls, subparsers):
-        parser = subparsers.add_parser(
-            cls.name, help=cls.help, description=cls.description
-        )
-        parser.set_defaults(command=cls)
-        cls.add_parser_arguments(parser)
+    def create(
+        cls, subparsers: argparse._SubParsersAction[argparse.ArgumentParser]
+    ) -> None:
+        if cls.name is not None:
+            parser: argparse.ArgumentParser = subparsers.add_parser(
+                cls.name, help=cls.help, description=cls.description
+            )
+            parser.set_defaults(command=cls)
+            cls.add_parser_arguments(parser)
 
     @classmethod
-    def add_parser_arguments(cls, parser):
+    def add_parser_arguments(cls, parser: argparse.ArgumentParser) -> None:
         pass
 
     @classmethod
-    def add_function_arguments(cls, parser):
+    def add_function_arguments(cls, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "--debug",
             "-d",
@@ -66,14 +71,14 @@ class Command:
             help="Enable Crossplane V1 compatibility mode",
         )
 
-    def __init__(self, args=None):
-        self.args = args
+    def __init__(self, args: argparse.Namespace | None = None) -> None:
+        self.args = args if args is not None else argparse.Namespace()
         self.initialize()
 
-    def initialize(self):
+    def initialize(self) -> None:
         pass
 
-    def initialize_function(self):
+    def initialize_function(self) -> None:
         formatter = Formatter(self.args.log_name_width)
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(formatter)
@@ -98,15 +103,16 @@ class Command:
         if self.args.allow_oversize_protos:
             from google.protobuf.internal import api_implementation
 
-            if api_implementation._c_module:
-                api_implementation._c_module.SetAllowOversizeProtos(True)
+            c_module = getattr(api_implementation, "_c_module", None)
+            if c_module:
+                c_module.SetAllowOversizeProtos(True)
 
-    async def run(self):
+    async def run(self) -> None:
         raise NotImplementedError()
 
 
 class Formatter(logging.Formatter):
-    def __init__(self, name_width):
+    def __init__(self, name_width: int):
         super().__init__(
             f"[{{asctime}}.{{msecs:03.0f}}] {{sname:{name_width}.{name_width}}} [{{levelname:8.8}}] {{message}}",
             "%Y-%m-%d %H:%M:%S",
@@ -114,16 +120,17 @@ class Formatter(logging.Formatter):
         )
         self.name_width = name_width
 
-    def format(self, record):
-        record.sname = record.name
-        extra = len(record.sname) - self.name_width
+    def format(self, record: logging.LogRecord):
+        sname = record.name
+        extra = len(sname) - self.name_width
         if extra > 0:
-            names = record.sname.split(".")
+            names = sname.split(".")
             for ix, name in enumerate(names):
                 if len(name) > extra:
                     names[ix] = name[extra:]
                     break
                 names[ix] = name[:1]
                 extra -= len(name) - 1
-            record.sname = ".".join(names)
+            sname = ".".join(names)
+        record.sname = sname
         return super().format(record)

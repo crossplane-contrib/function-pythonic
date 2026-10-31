@@ -7,7 +7,7 @@ readme = "README.md"
 authors = [
   { name = "Patrick J McNerthney", email = "pat@mcnerthney.com" }
 ]
-requires-python = ">=3.12,<3.16"
+requires-python = ">=3.15,<3.16"
 dependencies = [
   "grpcio==1.85.1",
   "inflect==7.6.0",
@@ -35,18 +35,26 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "grpcio-tools>=1.85.0",
+    "kopf==1.45.2",
+    "mypy-protobuf>=5.1.0",
     "poethepoet>=0.48.0",
+    "pip==26.2.2",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
     "ruff>=0.17.0",
+    "ty>=0.0.92",
+    "types-grpcio>=1.84.0.20261021",
 ]
 
 [tool.uv.build-backend]
 module-name = "crossplane.pythonic"
 
+[tool.ty.src]
+exclude = ["tests/test_protobuf_messages.py"]
+
 [tool.poe.tasks]
-generate-protoc = "python -m grpc_tools.protoc --proto_path=src --python_out=src --pyi_out=src --grpc_python_out=src crossplane/pythonic/proto/v1/run_function.proto"
+generate-protoc = "python -m grpc_tools.protoc --proto_path=src --python_out=src --mypy_out=src --grpc_python_out=src --mypy_grpc_out=src crossplane/pythonic/proto/v1/run_function.proto"
 test = "pytest tests -x --verbose --verbose --cov --cov-report=term --cov-report=html:reports"
 test-protobuf = "pytest tests/test_protobuf_*.py -x --verbose --verbose --cov --cov-report=term --cov-report=html:reports"
 test-ci = "pytest tests --verbose --verbose --junitxml=reports/pytest-junit.xml --cov --cov-report=term --cov-report=xml:reports/pytest-coverage.xml"

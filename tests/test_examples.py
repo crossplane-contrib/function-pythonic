@@ -1,6 +1,7 @@
 import os
 import pathlib
 import sys
+import typing
 
 import pytest
 import yaml
@@ -30,23 +31,35 @@ expecteds = pathlib.Path(__file__).parent / "examples"
 @pytest.mark.parametrize("id,xr", xrs, ids=[id for id, xr in xrs])
 @pytest.mark.asyncio
 async def test(id, xr):
-    composite = protobuf.Yaml(xr.read_text())
+    composite = typing.cast(protobuf.Value, protobuf.Yaml(xr.read_text()))
     directory = xr.parent
     observed = directory / "observed.yaml"
     if observed.is_file():
-        observed = protobuf.YamlAll(observed.read_text())
+        observed: list[protobuf.Value] = [
+            resource
+            for resource in typing.cast(
+                protobuf.Value, protobuf.YamlAll(observed.read_text())
+            )
+        ]
     else:
-        observed = []
+        observed = None
     composition = directory / "composition.yaml"
     if composition.is_file():
-        composition = protobuf.Yaml(composition.read_text())
+        composition = typing.cast(
+            protobuf.Value, protobuf.Yaml(composition.read_text())
+        )
     else:
         composition = None
     resources = directory / "resources.yaml"
     if resources.is_file():
-        resources = protobuf.YamlAll(resources.read_text())
+        resources: list[protobuf.Value] = [
+            resource
+            for resource in typing.cast(
+                protobuf.Value, protobuf.YamlAll(resources.read_text())
+            )
+        ]
     else:
-        resources = []
+        resources: None = None
     expected = (expecteds / id).with_suffix(".yaml")
     if not generate_expected:
         assert expected.is_file()
