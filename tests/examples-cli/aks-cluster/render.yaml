@@ -1,0 +1,78 @@
+---
+apiVersion: example.crossplane.io/v1
+kind: AzureKubernetesCluster
+metadata:
+  name: my-aks-cluster
+  namespace: my-aks-namespace
+status:
+  conditions:
+  - lastTransitionTime: '2026-01-01T00:00:00Z'
+    message: 'Unready resources: KubernetesCluster,ResourceGroup'
+    reason: Creating
+    status: 'False'
+    type: Ready
+  - lastTransitionTime: '2026-01-01T00:00:00Z'
+    message: All resources are composed
+    reason: AllComposed
+    status: 'True'
+    type: ResourcesComposed
+  - lastTransitionTime: '2026-01-01T00:00:00Z'
+    message: All resources are composed
+    reason: AllComposed
+    status: 'True'
+    type: ResourcesComposed
+---
+apiVersion: containerservice.azure.upbound.io/v1beta2
+kind: KubernetesCluster
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: KubernetesCluster
+  labels:
+    crossplane.io/composite: my-aks-cluster
+    example.crossplane.io/AzureKubernetesCluster: my-aks-cluster
+  name: my-aks-cluster
+  namespace: my-aks-namespace
+  ownerReferences:
+  - apiVersion: example.crossplane.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: AzureKubernetesCluster
+    name: my-aks-cluster
+    uid: ''
+ready: null
+spec:
+  forProvider:
+    defaultNodePool:
+      autoScalingEnabled: true
+      maxCount: 3
+      minCount: 1
+      name: systempool1
+      vmSize: Standard_B2ms
+    dnsPrefix: my-aks-cluster
+    identity:
+      type: SystemAssigned
+    location: westeurope
+    resourceGroupNameRef:
+      name: my-resource-group
+---
+apiVersion: azure.upbound.io/v1beta1
+kind: ResourceGroup
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: ResourceGroup
+  labels:
+    crossplane.io/composite: my-aks-cluster
+    example.crossplane.io/AzureKubernetesCluster: my-aks-cluster
+  name: my-resource-group
+  namespace: my-aks-namespace
+  ownerReferences:
+  - apiVersion: example.crossplane.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: AzureKubernetesCluster
+    name: my-aks-cluster
+    uid: ''
+ready: null
+spec:
+  forProvider:
+    location: westeurope

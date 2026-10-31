@@ -1,2 +1,3 @@
 [run]
-omit = tests/*
+source_pkgs = crossplane.pythonic
+omit = */proto/v1/*_pb2*.py

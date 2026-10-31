@@ -25,7 +25,9 @@ class ConnectionSecret:
                 composite._connectionSecret[key] = value
         return composite._connectionSecret
 
-    def __set__(self, composite: BaseComposite, values: typing.Mapping) -> None:
+    def __set__(
+        self, composite: BaseComposite, values: typing.Mapping | protobuf.Value
+    ) -> None:
         if composite.crossplane_v1:
             if values != composite.spec.writeConnectionSecretToRef:
                 raise NotImplementedError(
@@ -33,8 +35,11 @@ class ConnectionSecret:
                 )
             return
         composite._connectionSecret = protobuf.Map()
-        for key, value in values:
-            composite._connectionSecret[key] = value
+        for entry in values:
+            if isinstance(entry, str):
+                composite._connectionSecret[entry] = values[entry]
+            elif isinstance(entry, (tuple, list)):
+                composite._connectionSecret[entry[0]] = entry[1]
 
 
 class Connection:
@@ -43,20 +48,25 @@ class Connection:
             composite._connection = _Connection(composite)
         return composite._connection
 
-    def __set__(self, composite: BaseComposite, values: typing.Mapping) -> None:
+    def __set__(
+        self, composite: BaseComposite, values: typing.Mapping | protobuf.Value
+    ) -> None:
         connection = self.__get__(composite)
         connection()
-        for key, value in values:
-            connection[key] = value
+        for entry in values:
+            if isinstance(entry, str):
+                connection[entry] = values[entry]
+            elif isinstance(entry, (tuple, list)):
+                connection[entry[0]] = entry[1]
 
 
 class TTL:
     def __get__(self, composite: BaseComposite, objtype=None) -> int | float:
-        if composite.response.meta.ttl.nanos:
-            return float(composite.response.meta.ttl.seconds) + (
-                float(composite.response.meta.ttl.nanos) / 1000000000.0
-            )
-        return int(composite.response.meta.ttl.seconds)
+        if composite.response.meta.ttl.nanos == 0:
+            return int(composite.response.meta.ttl.seconds)
+        return float(composite.response.meta.ttl.seconds) + (
+            float(composite.response.meta.ttl.nanos) / 1000000000.0
+        )
 
     def __set__(self, composite: BaseComposite, ttl: float) -> None:
         if isinstance(ttl, int):
@@ -223,7 +233,7 @@ class Credentials:
         return Credential(cast(protobuf.Message, self._request.credentials[key]))
 
     def __bool__(self) -> bool:
-        return bool(self._request.credentials)
+        return bool(len(self))
 
     def __len__(self) -> int:
         return len(self._request.credentials)
@@ -247,7 +257,7 @@ class Credential:
         return str(self._credential.credential_data.data[key])
 
     def __bool__(self) -> bool:
-        return bool(self._credential.credential_data.data)
+        return bool(len(self))
 
     def __len__(self) -> int:
         return len(self._credential.credential_data.data)
@@ -276,7 +286,7 @@ class Resources:
         return resource
 
     def __bool__(self) -> bool:
-        return bool(self._composite.response.desired.resources)
+        return bool(len(self))
 
     def __len__(self) -> int:
         return len(self._composite.response.desired.resources)
@@ -291,7 +301,7 @@ class Resources:
     def __setattr__(
         self,
         key: protobuf.TypeString,
-        resource: typing.Mapping,
+        resource: typing.Mapping | protobuf.Value,
     ) -> None:
         if key in ("_composite", "_cache"):
             self.__dict__[str(key)] = resource
@@ -301,7 +311,7 @@ class Resources:
     def __setitem__(
         self,
         key: protobuf.TypeString,
-        resource: typing.Mapping,
+        resource: typing.Mapping | protobuf.Value,
     ) -> None:
         self._composite.response.desired.resources[key].resource = resource
         self._cache.pop(key, None)
@@ -483,7 +493,7 @@ class Resource:
         resource: Resource,
         field: protobuf.FieldMessage | protobuf.Value | None | _notset = _notset,
     ):
-        dependency: protobuf.FieldMessage | protobuf.Value | bool | None
+        dependency: protobuf.FieldMessage | protobuf.Value | bool | None = None
         if field is _notset:
             dependency = resource.ready
             if dependency is None:
@@ -492,7 +502,9 @@ class Resource:
                     dependency = False
                 resource.ready = dependency
         elif field is None:
-            dependency = True
+            field = _notset
+        else:
+            dependency = field
         if not isinstance(dependency, (protobuf.FieldMessage, protobuf.Value)):
             if field:
                 dependency = resource.observed.metadata.name
@@ -654,7 +666,8 @@ class RequiredResources:
 
     @matchLabels.setter
     def matchLabels(
-        self, labels: typing.Mapping[str, str] | protobuf.Value | protobuf.MapMessage
+        self,
+        labels: typing.Mapping[str, str] | protobuf.Value | None,
     ):
         self._selector.match_labels.labels()
         if labels:
@@ -672,7 +685,7 @@ class RequiredResources:
         return resource
 
     def __bool__(self) -> bool:
-        return bool(self._resources.items)
+        return bool(len(self))
 
     def __len__(self) -> int:
         return len(self._resources.items)
@@ -822,7 +835,7 @@ class Schema:
         return self._schema[key]
 
     def __bool__(self) -> bool:
-        return bool(self._schema)
+        return bool(len(self))
 
     def __len__(self) -> int:
         return len(self._schema)
@@ -862,9 +875,9 @@ class Conditions:
         return Condition(self, type)
 
     def __bool__(self) -> bool:
-        if self._response is not None and self._response.conditions:
+        if self._response is not None and len(self._response.conditions):
             return True
-        return bool(self._observed.resource.status.conditions)
+        return bool(len(self))
 
     def __len__(self) -> int:
         return len(self._types())
@@ -1074,7 +1087,7 @@ class Results:
         return result
 
     def __bool__(self) -> bool:
-        return len(self) > 0
+        return bool(len(self))
 
     def __len__(self) -> int:
         return len(self._results)
@@ -1205,7 +1218,7 @@ class _Connection:
     def observed(self) -> protobuf.MapMessage:
         return cast(
             protobuf.MapMessage,
-            self._composite.response.observed.composite.connection_details,
+            self._composite.request.observed.composite.connection_details,
         )
 
     def __getattr__(self, key: protobuf.TypeString) -> protobuf.FieldMessage:
@@ -1218,7 +1231,7 @@ class _Connection:
         )
 
     def __bool__(self) -> bool:
-        return bool(self._composite.response.desired.composite.connection_details)
+        return bool(len(self))
 
     def __len__(self) -> int:
         return len(self._composite.response.desired.composite.connection_details)

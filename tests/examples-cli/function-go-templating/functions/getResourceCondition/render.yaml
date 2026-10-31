@@ -1,0 +1,45 @@
+---
+apiVersion: example.crossplane.io/v1beta1
+kind: XR
+metadata:
+  name: example
+status:
+  composedCondition:
+    lastTransitionTime: '2023-11-03T09:07:31Z'
+    message: ''
+    reason: foo
+    status: 'True'
+    type: Ready
+  compositeCondition:
+    lastTransitionTime: '2023-11-03T09:07:31Z'
+    message: ''
+    reason: xr foo
+    status: 'True'
+    type: Ready
+  compositeNotFound:
+    message: ''
+    reason: ''
+    status: Unknown
+    type: Other
+  conditions:
+  - lastTransitionTime: '2026-01-01T00:00:00Z'
+    reason: Available
+    status: 'True'
+    type: Ready
+  - lastTransitionTime: '2026-01-01T00:00:00Z'
+    message: All resources are composed
+    reason: AllComposed
+    status: 'True'
+    type: ResourcesComposed
+  nonResource:
+    message: ''
+    reason: ''
+    status: Unknown
+    type: Ready
+  pipeline:
+    lastTransitionTime: '2023-11-03T09:07:31Z'
+    message: ''
+    reason: foo
+    status: 'True'
+    type: Ready
+  projectId: abcdef
