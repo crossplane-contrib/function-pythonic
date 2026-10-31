@@ -6,6 +6,7 @@ import pytest
 from crossplane.pythonic import (
     auto_ready,
     composite,
+    protobuf,
 )
 from crossplane.pythonic.proto.v1 import run_function_pb2 as fnv1
 from tests import utils
@@ -43,15 +44,19 @@ def test(id, test):
         ),
     )
     composite_test = composite.BaseComposite(False, request, logger)
-    ready = composite_test.resources.test.ready
+    ready: protobuf.Value | bool | None = composite_test.resources.test.ready
     if ready is None:
         message = "Ready is not set"
     else:
-        message = f"Ready is {ready._fullName()}"
-        ready = bool(ready)
+        if isinstance(ready, protobuf.Value):
+            message = f"Ready is {ready._fullName()}"
+            ready = bool(ready)
+        else:
+            message = f'Ready is "{ready}"'
     assert test["ready"] == ready, message
 
 
 def test_abstract():
+    composite_test = composite.BaseComposite(False, fnv1.RunFunctionRequest(), logger)
     with pytest.raises(NotImplementedError):
-        auto_ready.Check().ready(None)
+        auto_ready.Check().ready(composite_test.resources.test)

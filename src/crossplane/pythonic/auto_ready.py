@@ -1,7 +1,10 @@
-from . import (
-    composite,
-    protobuf,
-)
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from . import (
+        composite,
+        protobuf,
+    )
 
 
 def resource_ready(resource: composite.Resource) -> protobuf.Value | None:
@@ -13,9 +16,9 @@ def resource_ready(resource: composite.Resource) -> protobuf.Value | None:
 
 
 class ReadyCondition:
-    def ready(self, resource):
+    def ready(self, resource: composite.Resource) -> protobuf.Value | None:
         ready = resource.conditions.Ready
-        if not ready._find_condition():
+        if not ready._get_condition():
             return None
         if ready.status:
             return resource.observed.metadata.name
@@ -24,7 +27,7 @@ class ReadyCondition:
         return resource.status.notReadyCondition
 
 
-_checks = {}
+_checks: dict[tuple, Check] = {}
 _check_default = ReadyCondition()
 
 
@@ -35,12 +38,12 @@ class Check:
         if hasattr(cls, "apiVersion"):
             _checks[(cls.apiVersion, cls.__name__)] = cls()
 
-    def ready(self, resource):
+    def ready(self, resource: composite.Resource) -> protobuf.Value | None:
         raise NotImplementedError()
 
 
 class AlwaysReady(Check):
-    def ready(self, resource):
+    def ready(self, resource: composite.Resource) -> protobuf.Value:
         return resource.observed.metadata.name
 
 
@@ -59,7 +62,7 @@ class ConfigMap(AlwaysReady):
 class CronJob(Check):
     apiVersion = "batch/v1"
 
-    def ready(self, resource):
+    def ready(self, resource: composite.Resource) -> protobuf.Value:
         if resource.observed.spec.suspend and len(resource.observed.spec.suspend):
             return resource.observed.metadata.name
         if not resource.status.lastScheduleTime:
@@ -78,7 +81,7 @@ class CronJob(Check):
 class DaemonSet(Check):
     apiVersion = "apps/v1"
 
-    def ready(self, resource):
+    def ready(self, resource: composite.Resource) -> protobuf.Value:
         scheduled = resource.status.desiredNumberScheduled
         if not scheduled:
             return scheduled
@@ -94,7 +97,7 @@ class DaemonSet(Check):
 class Deployment(Check):
     apiVersion = "apps/v1"
 
-    def ready(self, resource):
+    def ready(self, resource: composite.Resource) -> protobuf.Value:
         replicas = resource.observed.spec.replicas or 1
         for field in ("updatedReplicas", "availableReplicas"):
             value = resource.status[field]
@@ -115,7 +118,7 @@ class Deployment(Check):
 class HorizontalPodAutoscaler(Check):
     apiVersion = "autoscaling/v2"
 
-    def ready(self, resource):
+    def ready(self, resource: composite.Resource) -> protobuf.Value:
         for type in (
             "FailedGetScale",
             "FailedUpdateScale",
@@ -133,7 +136,7 @@ class HorizontalPodAutoscaler(Check):
 class Ingress(Check):
     apiVersion = "networking.k8s.io/v1"
 
-    def ready(self, resource):
+    def ready(self, resource: composite.Resource) -> protobuf.Value:
         if not len(resource.status.loadBalancer.ingress):
             return resource.status.noLoadBalancerIngresses
         return resource.observed.metadata.name
@@ -142,7 +145,7 @@ class Ingress(Check):
 class Job(Check):
     apiVersion = "batch/v1"
 
-    def ready(self, resource):
+    def ready(self, resource: composite.Resource) -> protobuf.Value:
         for type in ("Failed", "Suspended"):
             if resource.conditions[type].status:
                 return resource.status[f"is{type}"]
@@ -163,7 +166,7 @@ class Namespace(AlwaysReady):
 class PersistentVolumeClaim(Check):
     apiVersion = "v1"
 
-    def ready(self, resource):
+    def ready(self, resource: composite.Resource) -> protobuf.Value:
         if resource.status.phase != "Bound":
             return resource.status.phaseNotBound
         return resource.observed.metadata.name
@@ -172,7 +175,7 @@ class PersistentVolumeClaim(Check):
 class Pod(Check):
     apiVersion = "v1"
 
-    def ready(self, resource):
+    def ready(self, resource: composite.Resource) -> protobuf.Value:
         if resource.status.phase == "Succeeded":
             return resource.observed.metadata.name
         if (
@@ -187,7 +190,7 @@ class Pod(Check):
 class ReplicaSet(Check):
     apiVersion = "apps/v1"
 
-    def ready(self, resource):
+    def ready(self, resource: composite.Resource) -> protobuf.Value:
         if int(resource.status.observedGeneration) < int(
             resource.observed.metadata.generation
         ):
@@ -220,7 +223,7 @@ class Secret(AlwaysReady):
 class Service(Check):
     apiVersion = "v1"
 
-    def ready(self, resource):
+    def ready(self, resource: composite.Resource) -> protobuf.Value:
         if resource.observed.spec.type != "LoadBalancer":
             return resource.observed.metadata.name
         if not len(resource.status.loadBalancer.ingress):
@@ -235,7 +238,7 @@ class ServiceAccount(AlwaysReady):
 class StatefulSet(Check):
     apiVersion = "apps/v1"
 
-    def ready(self, resource):
+    def ready(self, resource: composite.Resource) -> protobuf.Value:
         replicas = resource.observed.spec.replicas or 1
         for field in ("readyReplicas", "currentReplicas"):
             value = resource.status[field]
