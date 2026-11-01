@@ -500,7 +500,7 @@ class Command(command.Command):
                 for requirement in step.requirements.requiredResources:
                     await self.set_required(
                         requirement.requirementName,
-                        requirement,
+                        self.requirement_selector(requirement),
                         cast(protobuf.MapMessage, request.required_resources),
                         resources,
                         api,
@@ -727,7 +727,7 @@ class Command(command.Command):
     async def set_required(
         self,
         name: protobuf.TypeString,
-        selector: protobuf.Value,
+        selector: protobuf.Message,
         requireds: protobuf.MapMessage,
         resources: list[protobuf.Value] | None = None,
         api: Api | None = None,
@@ -767,10 +767,10 @@ class Command(command.Command):
             if len(selector.match_name):
                 resource = await self.kr8s_get(
                     api,
-                    selector.kind,
-                    selector.api_version,
-                    selector.namespace,
-                    selector.match_name,
+                    cast(protobuf.TypeString, selector.kind),
+                    cast(protobuf.TypeString, selector.api_version),
+                    cast(protobuf.TypeString, selector.namespace),
+                    cast(protobuf.TypeString, selector.match_name),
                 )
                 if resource:
                     await self.set_resource(
@@ -779,14 +779,33 @@ class Command(command.Command):
             elif len(selector.match_labels.labels):
                 for resource in await self.kr8s_list(
                     api,
-                    selector.kind,
-                    selector.api_version,
-                    selector.namespace,
-                    selector.match_labels.labels,
+                    cast(protobuf.TypeString, selector.kind),
+                    cast(protobuf.TypeString, selector.api_version),
+                    cast(protobuf.TypeString, selector.namespace),
+                    cast(protobuf.MapMessage, selector.match_labels.labels),
                 ):
                     await self.set_resource(
                         resource, items[protobuf.append], resources, api
                     )
+
+    def requirement_selector(self, requirement: protobuf.Value) -> protobuf.Message:
+        # Convert a Composition step requirement into a function ResourceSelector.
+        selector = protobuf.Message(
+            None,
+            "selector",
+            fnv1.ResourceSelector.DESCRIPTOR,
+            fnv1.ResourceSelector(),
+        )
+        selector.api_version = requirement.apiVersion
+        selector.kind = requirement.kind
+        if requirement.namespace:
+            selector.namespace = requirement.namespace
+        if requirement.name:
+            selector.match_name = requirement.name
+        elif requirement.matchLabels:
+            for key, value in requirement.matchLabels:
+                selector.match_labels.labels[key] = value
+        return selector
 
     async def set_resource(
         self,
@@ -887,7 +906,7 @@ class Command(command.Command):
         ref = str(ref)
         if ref in visiting:
             return
-        if not ref.startswith("#?"):
+        if not ref.startswith("#/"):
             return
         d = document
         for segment in ref.split("/")[1:]:

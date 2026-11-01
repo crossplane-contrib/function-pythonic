@@ -1,0 +1,70 @@
+---
+apiVersion: example.crossplane.io/v1
+kind: XR
+metadata:
+  name: example-xr
+status:
+  conditions:
+  - lastTransitionTime: '2026-01-01T00:00:00Z'
+    message: 'Unready resources: first-resource'
+    reason: Creating
+    status: 'False'
+    type: Ready
+  - lastTransitionTime: '2026-01-01T00:00:00Z'
+    message: All resources are composed
+    reason: AllComposed
+    status: 'True'
+    type: ResourcesComposed
+  - lastTransitionTime: '2026-01-01T00:00:00Z'
+    message: All resources are composed
+    reason: AllComposed
+    status: 'True'
+    type: ResourcesComposed
+---
+apiVersion: nop.crossplane.io/v1alpha1
+kind: NopResource
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: first-resource
+  generateName: example-xr-
+  labels:
+    crossplane.io/composite: example-xr
+  ownerReferences:
+  - apiVersion: example.crossplane.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: XR
+    name: example-xr
+    uid: ''
+ready: null
+spec:
+  forProvider:
+    conditionAfter:
+    - conditionStatus: 'False'
+      conditionType: Ready
+      time: 5s
+    - conditionStatus: 'True'
+      conditionType: Ready
+      time: 10s
+    - conditionStatus: 'False'
+      conditionType: Ready
+      time: 30s
+    - conditionStatus: 'True'
+      conditionType: Ready
+      time: 90s
+---
+apiVersion: render.crossplane.io/v1beta1
+kind: Result
+message: Delaying creation of resource matching "second-resource" because "first-resource"
+  is not fully ready
+reason: ''
+severity: SEVERITY_NORMAL
+step: sequencer
+---
+apiVersion: render.crossplane.io/v1beta1
+kind: Result
+message: Delaying creation of resource matching "third-resource" because "first-resource"
+  is not fully ready
+reason: ''
+severity: SEVERITY_NORMAL
+step: sequencer

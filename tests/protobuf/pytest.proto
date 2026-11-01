@@ -13,3 +13,18 @@ message Message {
   repeated string list_string = 7;
   repeated google.protobuf.Struct list_map = 8;
 }
+
+message Scalars {
+  bytes bytes = 1;
+  int64 int = 2;
+  double float = 3;
+  bool bool = 4;
+  Message message = 5;
+  repeated Message messages = 6;
+  map<string, Message> map_message = 7;
+  map<string, bytes> map_bytes = 8;
+  repeated bytes list_bytes = 9;
+  repeated int64 list_int = 10;
+  map<string, google.protobuf.ListValue> map_list = 11;
+  repeated google.protobuf.ListValue list_list = 12;
+}

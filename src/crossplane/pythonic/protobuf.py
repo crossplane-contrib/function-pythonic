@@ -292,18 +292,34 @@ class Message(TypeProtobuf):
         key = self._validate_key(key)
         if key not in self._descriptor.fields_by_name:
             raise AttributeError(obj=self, name=key)
-        field = self._descriptor.fields_by_name[key]
-        self._ensure_message()
-        if isinstance(value, Message):
-            value = value._message
-        elif isinstance(value, (MapMessage, RepeatedMessage)):
-            value = value._messages
-        elif isinstance(value, FieldMessage):
+        if isinstance(value, (Message, MapMessage)):
+            for k, v in value:
+                self[key][k] = v
+            return
+        if isinstance(value, dict):
+            for k, v in value.items():
+                self[key][k] = v
+            return
+        if isinstance(value, (RepeatedMessage, list, tuple)):
+            for ix, v in enumerate(value):
+                self[key][ix] = v
+            return
+        if isinstance(value, FieldMessage):
             value = value._value
         elif isinstance(value, Value):
+            if value._isMap:
+                for k, v in value:
+                    self[key][k] = v
+                return
+            if value._isList:
+                for ix, v in enumerate(value):
+                    self[key][ix] = v
+                return
             value = value._raw
+        field = self._descriptor.fields_by_name[key]
         if field.type == field.TYPE_BYTES and isinstance(value, str):
             value = value.encode("utf-8")
+        self._ensure_message()
         setattr(self._message, key, value)
         self._cache.pop(key, None)
 
@@ -378,7 +394,9 @@ class MapMessage(TypeProtobuf):
         return 0 if self._messages is _Unknown else len(self._messages)
 
     def __contains__(self, key):
-        return self._messages is not _Unknown and key in self._messages
+        return (
+            self._messages is not _Unknown and self._validate_key(key) in self._messages
+        )
 
     def __iter__(self):
         if self._messages is not _Unknown:
@@ -386,7 +404,7 @@ class MapMessage(TypeProtobuf):
                 yield key, self[key]
 
     def __hash__(self):
-        if self._nessages is not None:
+        if self._messages is not _Unknown:
             return hash(
                 tuple(
                     hash(item) for item in sorted(iter(self), key=lambda item: item[0])
@@ -495,7 +513,7 @@ class MapMessage(TypeProtobuf):
         if self._messages is not _Unknown:
             if key in self._messages:
                 del self._messages[key]
-            self._cache.pop(key)
+            self._cache.pop(key, None)
 
     def _validate_key(self, key):
         if isinstance(key, FieldMessage):
@@ -700,9 +718,19 @@ class RepeatedMessage(TypeProtobuf):
             self._messages: RepeatedCompositeFieldContainer = (
                 self._parent._create_child(self._key)
             )
+        if isinstance(value, Message):
+            value = value._message
+        elif isinstance(value, (MapMessage, RepeatedMessage)):
+            value = value._messages
+        elif isinstance(value, FieldMessage):
+            value = value._value
+        elif isinstance(value, Value):
+            value = value._raw
         if value is _Unknown:
             typing.cast(RepeatedCompositeFieldContainer, self._messages).add()
         else:
+            if self._field.type == self._field.TYPE_BYTES and isinstance(value, str):
+                value = value.encode("utf-8")
             self._messages.append(value)
         return self[len(self._messages) - 1]
 
@@ -733,12 +761,12 @@ class FieldMessage(TypeProtobuf):
         return self._value is not _Unknown
 
     def __len__(self):
-        if self._value is _Unknown:
+        if self._value is _Unknown or not isinstance(self._value, (bytes, str)):
             return 0
         return len(self._value)
 
     def __contains__(self, key):
-        if self._value is _Unknown:
+        if self._value is _Unknown or not isinstance(self._value, (bytes, str)):
             return False
         return key in self._value
 
@@ -751,11 +779,16 @@ class FieldMessage(TypeProtobuf):
         if self._value is _Unknown:
             return False
         if isinstance(other, FieldMessage):
-            return self._value == other._value
+            other = other._value
+        if isinstance(self._value, str):
+            if isinstance(other, bytes):
+                other = other.decode("utf-8")
+        elif isinstance(self._value, bytes) and isinstance(other, str):
+            other = other.encode("utf-8")
         return self._value == other
 
     def __bytes__(self):
-        if self._value is _Unknown:
+        if self._value is _Unknown or not isinstance(self._value, (bytes, str)):
             return None  # noqa: PLE0308
         if isinstance(self._value, str):
             return self._value.encode("utf-8")
@@ -847,18 +880,12 @@ class Value(TypeProtobuf):
                 self._value.string_value = value
             else:
                 raise ValueError(f"Unexpected Value type: {value.__class__}")
-        self._readOnly: str | bool = readOnly
+        self._setReadOnly(readOnly)
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        pass
-
-    def __aenter__(self):
-        return self
-
-    def __aexit__(self, exc_type, exc_value, traceback):
         pass
 
     def __getattr__(self, key):
@@ -1208,7 +1235,7 @@ class Value(TypeProtobuf):
         elif isinstance(value, bool):  # Must be before int check
             values[key].bool_value = value
         elif isinstance(value, bytes):
-            values[key].string_value = value._value.decode("utf-8")
+            values[key].string_value = value.decode("utf-8")
         elif isinstance(value, str):
             values[key].string_value = value
         elif isinstance(value, (int, float)):
@@ -1229,10 +1256,10 @@ class Value(TypeProtobuf):
                 values[key].string_value = value._value.decode("utf-8")
             elif value._value is None:
                 values[key].null_value = value._value.null_value
+            elif isinstance(value._value, bool):  # Must be before number check
+                values[key].bool_value = value._value
             elif isinstance(value._value, (int, float)):
                 values[key].number_value = value._value
-            elif isinstance(value._value, bool):
-                values[key].bool_value = value._value
             elif value._value is _Unknown:
                 self._setUnknown(key, value)
             else:
@@ -1275,6 +1302,8 @@ class Value(TypeProtobuf):
             case "null_value":
                 return self._value.null_value
             case "number_value":
+                if self._value.number_value.is_integer():
+                    return int(self._value.number_value)
                 return self._value.number_value
             case "bool_value":
                 return self._value.bool_value
@@ -1347,7 +1376,9 @@ class Value(TypeProtobuf):
             for ix in sorted(self._dependencies.keys()):
                 if ix > key:
                     self._cache.pop(ix, None)
-                    self._dependencies[typing.cast(int, ix) - 1] = self._dependences[ix]
+                    self._dependencies[typing.cast(int, ix) - 1] = self._dependencies[
+                        ix
+                    ]
                     del self._dependencies[ix]
             for ix in sorted(self._unknowns.keys()):
                 if ix > key:
@@ -1486,6 +1517,17 @@ class Value(TypeProtobuf):
                     dependencies.update(value._getDependencies)
         return dependencies
 
+    def _setReadOnly(self, readOnly: bool | str):
+        self._readOnly = readOnly
+        if self._isMap:
+            for key, value in self:
+                if isinstance(value, Value):
+                    value._setReadOnly(readOnly)
+        elif self._isList:
+            for value in enumerate(self):
+                if isinstance(value, Value):
+                    value._setReadOnly(readOnly)
+
     def _patchUnknowns(self, patches):
         for key in list(self._unknowns.keys()):
             self[key] = patches[key]
@@ -1556,7 +1598,7 @@ class _JSONEncoder(json.JSONEncoder):
             return o._value
         if isinstance(o, Value):
             match o._kind:
-                case "struct_value" | "Struc":
+                case "struct_value" | "Struct":
                     return {key: value for key, value in o}
                 case "list_value" | "ListValue":
                     return [value for value in o]
@@ -1577,6 +1619,8 @@ class _JSONEncoder(json.JSONEncoder):
                     return "<<UNEXPECTED>>"
         if isinstance(o, datetime.datetime):
             return o.isoformat()
+        if isinstance(o, bytes):
+            return o.decode("utf-8")
         return super().default(o)
 
 
@@ -1586,32 +1630,32 @@ class _Dumper(yaml.SafeDumper):
             "tag:yaml.org,2002:str", data, "|" if "\n" in data else None
         )
 
-    def represent_message_dict(self, message):
+    def represent_message_dict(self, message: Message | MapMessage):
         return self.represent_dict({key: value for key, value in message})
 
-    def represent_message_list(self, messages):
+    def represent_message_list(self, messages: RepeatedMessage):
         return self.represent_list([value for value in messages])
 
-    def represent_message_field(self, field):
+    def represent_message_field(self, field: FieldMessage):
         if isinstance(field._value, str):
             return self.represent_str(field._value)
         if isinstance(field._value, bytes):
             return self.represent_binary(field._value)
         if field._value is None:
             return self.represent_none(field._value)
+        if isinstance(field._value, bool):  # Must be before number check
+            return self.represent_bool(bool(field._value))
         if isinstance(field._value, int):
             return self.represent_int(field._value)
         if isinstance(field._value, float):
             if field._value.is_integer():
                 return self.represent_int(int(field._value))
             return self.represent_float(field._value)
-        if isinstance(field._value, bool):
-            return self.represent_bool(field._value)
         if field._value is _Unknown:
             return self.represent_str("<<UNKNOWN>>")
         return self.represent_str("<<UNEXPECTED>>")
 
-    def represent_value(self, value):
+    def represent_value(self, value: Value):
         match value._kind:
             case "struct_value" | "Struct":
                 return self.represent_dict({k: v for k, v in value})
@@ -1627,7 +1671,7 @@ class _Dumper(yaml.SafeDumper):
                     return self.represent_int(int(value))
                 return self.represent_float(value)
             case "bool_value":
-                return self.represent_bool(value._value.bool_value)
+                return self.represent_bool(bool(value._value.bool_value))
             case "Unknown":
                 return self.represent_str("<<UNKNOWN>>")
             case _:

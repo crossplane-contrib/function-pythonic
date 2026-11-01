@@ -1,0 +1,90 @@
+---
+apiVersion: example.joebowbeer.com/v1alpha1
+kind: VCluster
+metadata:
+  name: xc1
+spec: {}
+status:
+  conditions:
+  - lastTransitionTime: '2026-01-01T00:00:00Z'
+    reason: Creating
+    status: 'False'
+    type: Ready
+  - lastTransitionTime: '2026-01-01T00:00:00Z'
+    message: VCluster Helm release created
+    reason: VClusterCreated
+    status: 'False'
+    type: VClusterReady
+  - lastTransitionTime: '2026-01-01T00:00:00Z'
+    message: 'Desired resources with unknowns: argocd_secret'
+    reason: DesiredUnknowns
+    status: 'False'
+    type: ResourcesComposed
+---
+apiVersion: v1
+data:
+  config: UNKNOWN:request.required_resources.vcluster_secret.items[0].resource.data
+  name: eGMx
+  server: aHR0cHM6Ly94YzEueGMxOjQ0Mw==
+kind: Secret
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: argocd_secret
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+    crossplane.io/composite: xc1
+  name: vc-xc1
+  namespace: argocd
+  ownerReferences:
+  - apiVersion: example.joebowbeer.com/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: VCluster
+    name: xc1
+    uid: ''
+ready: false
+type: Opaque
+---
+apiVersion: helm.crossplane.io/v1beta1
+kind: Release
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: release
+  labels:
+    crossplane.io/composite: xc1
+  name: xc1
+  ownerReferences:
+  - apiVersion: example.joebowbeer.com/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: VCluster
+    name: xc1
+    uid: ''
+ready: null
+spec:
+  forProvider:
+    chart:
+      name: vcluster
+      repository: https://charts.loft.sh
+      version: 0.26.0
+    namespace: xc1
+    values:
+      controlPlane:
+        proxy:
+          extraSANs:
+          - xc1.xc1
+  rollbackLimit: 1
+---
+apiVersion: render.crossplane.io/v1beta1
+kind: Result
+message: VCluster Helm release created
+reason: VClusterCreated
+severity: SEVERITY_NORMAL
+step: pythonic
+---
+apiVersion: render.crossplane.io/v1beta1
+kind: Result
+message: 'Desired resources with unknowns: argocd_secret'
+reason: DesiredUnknowns
+severity: SEVERITY_NORMAL
+step: pythonic

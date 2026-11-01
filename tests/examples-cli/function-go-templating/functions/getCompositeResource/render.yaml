@@ -1,0 +1,38 @@
+---
+apiVersion: example.crossplane.io/v1beta1
+kind: XR
+metadata:
+  name: example
+status:
+  conditions:
+  - lastTransitionTime: '2026-01-01T00:00:00Z'
+    message: 'Unready resources: flexserver'
+    reason: Creating
+    status: 'False'
+    type: Ready
+  - lastTransitionTime: '2026-01-01T00:00:00Z'
+    message: All resources are composed
+    reason: AllComposed
+    status: 'True'
+    type: ResourcesComposed
+---
+apiVersion: dbforpostgresql.azure.upbound.io/v1beta1
+kind: FlexibleServer
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: flexserver
+  generateName: example-
+  labels:
+    crossplane.io/composite: example
+  ownerReferences:
+  - apiVersion: example.crossplane.io/v1beta1
+    blockOwnerDeletion: true
+    controller: true
+    kind: XR
+    name: example
+    uid: ''
+ready: null
+spec:
+  forProvider:
+    adminLogin: admin
+    location: eastus

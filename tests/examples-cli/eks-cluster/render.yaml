@@ -1,0 +1,118 @@
+---
+apiVersion: pythonic.crossplane.io/v1alpha1
+kind: EksCluster
+metadata:
+  name: pythonic
+status:
+  conditions:
+  - lastTransitionTime: '2026-01-01T00:00:00Z'
+    message: 'Unready resources: Address,RoleCluster,VPC'
+    reason: Creating
+    status: 'False'
+    type: Ready
+  - lastTransitionTime: '2026-01-01T00:00:00Z'
+    message: 'Desired resources with unknowns: Cluster,Cluster_Role_<<UNKNOWN>>,Cluster_Subnet_<<UNKNOWN>>,InternetGateway,InternetGateway_VPC_<<UNKNOWN>>,NATGateway,NATGateway_Address_<<UNKNOWN>>,NATGateway_Subnet_<<UNKNOWN>>,RoutePrivate,RoutePrivate_NATGateway_<<UNKNOWN>>,RoutePrivate_RouteTable_<<UNKNOWN>>,RoutePublic,RoutePublic_InternetGateway_<<UNKNOWN>>,RoutePublic_RouteTable_<<UNKNOWN>>,RouteTablePrivate,RouteTablePrivate_Subnet_<<UNKNOWN>>,RouteTablePrivate_VPC_<<UNKNOWN>>,RouteTablePublic,RouteTablePublic_Subnet_<<UNKNOWN>>,RouteTablePublic_VPC_<<UNKNOWN>>,RpaClusterPolicy,RpaClusterPolicy_Role_<<UNKNOWN>>,RpaVPCResourceController,RpaVPCResourceController_Role_<<UNKNOWN>>,SubnetPrivateA,SubnetPrivateA_VPC_<<UNKNOWN>>,SubnetPrivateB,SubnetPrivateB_VPC_<<UNKNOWN>>,SubnetPrivateC,SubnetPrivateC_VPC_<<UNKNOWN>>,SubnetPublicA,SubnetPublicA_VPC_<<UNKNOWN>>,SubnetPublicB,SubnetPublicB_VPC_<<UNKNOWN>>,SubnetPublicC,SubnetPublicC_VPC_<<UNKNOWN>>'
+    reason: DesiredUnknowns
+    status: 'False'
+    type: ResourcesComposed
+---
+apiVersion: ec2.aws.crossplane.io/v1beta1
+kind: Address
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: Address
+  generateName: pythonic-
+  labels:
+    crossplane.io/composite: pythonic
+  ownerReferences:
+  - apiVersion: pythonic.crossplane.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: EksCluster
+    name: pythonic
+    uid: ''
+ready: null
+spec:
+  forProvider:
+    region: us-east-1
+    tags:
+    - key: Name
+      value: pythonic
+    - key: crossplane-contrib:cloudops
+      value: owned
+    - key: environment
+      value: stage
+    - key: project
+      value: development
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: Role
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: RoleCluster
+    crossplane.io/external-name: pythonic-cluster
+  generateName: pythonic-
+  labels:
+    crossplane.io/composite: pythonic
+  ownerReferences:
+  - apiVersion: pythonic.crossplane.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: EksCluster
+    name: pythonic
+    uid: ''
+ready: null
+spec:
+  forProvider:
+    assumeRolePolicyDocument: |-
+      {
+        "Statement": [
+          {
+            "Action": "sts:AssumeRole",
+            "Effect": "Allow",
+            "Principal": {
+              "Service": "eks.amazonaws.com"
+            }
+          }
+        ],
+        "Version": "2012-10-17"
+      }
+    tags:
+    - key: crossplane-contrib:cloudops
+      value: owned
+    - key: environment
+      value: stage
+    - key: project
+      value: development
+---
+apiVersion: ec2.aws.crossplane.io/v1beta1
+kind: VPC
+metadata:
+  annotations:
+    crossplane.io/composition-resource-name: VPC
+  generateName: pythonic-
+  labels:
+    crossplane.io/composite: pythonic
+  ownerReferences:
+  - apiVersion: pythonic.crossplane.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: EksCluster
+    name: pythonic
+    uid: ''
+ready: null
+spec:
+  forProvider:
+    cidrBlock: 10.0.0.0/16
+    enableDnsHostNames: true
+    enableDnsSupport: true
+    region: us-east-1
+    tags:
+    - key: Name
+      value: pythonic
+    - key: crossplane-contrib:cloudops
+      value: owned
+    - key: environment
+      value: stage
+    - key: project
+      value: development

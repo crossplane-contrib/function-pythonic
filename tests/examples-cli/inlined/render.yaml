@@ -1,0 +1,17 @@
+---
+apiVersion: inlined.example.org/v1alpha1
+kind: Step
+metadata:
+  name: inlined-example
+status:
+  composite: Hello, World!
+  conditions:
+  - lastTransitionTime: '2026-01-01T00:00:00Z'
+    reason: Available
+    status: 'True'
+    type: Ready
+  - lastTransitionTime: '2026-01-01T00:00:00Z'
+    message: All resources are composed
+    reason: AllComposed
+    status: 'True'
+    type: ResourcesComposed
