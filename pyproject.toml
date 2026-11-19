@@ -38,7 +38,7 @@ dev = [
     "kopf==1.45.2",
     "mypy-protobuf>=5.1.0",
     "poethepoet>=0.48.0",
-    "pip==26.2.2",
+    "pip==26.3",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
