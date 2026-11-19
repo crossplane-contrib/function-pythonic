@@ -114,7 +114,7 @@ def test_composite_ready(ready, expected, enum):
     xr = composite()
     xr.ready = ready
     assert xr.ready is expected
-    assert xr.response.desired.composite._message.ready == enum  #  ty: ignore[unresolved-attribute]
+    assert xr.response.desired.composite._message.ready == enum  #  ty: ignore[missing-union-attribute]
 
 
 def test_composite_ready_from_desired():
@@ -137,7 +137,7 @@ def test_capabilities_absent():
 
 def test_capabilities_present():
     xr = composite()
-    xr.request._message.meta.capabilities.extend(  #  ty: ignore[unresolved-attribute]
+    xr.request._message.meta.capabilities.extend(  #  ty: ignore[missing-attribute]
         [
             fnv1.CAPABILITY_CAPABILITIES,
             fnv1.CAPABILITY_REQUIRED_RESOURCES,
@@ -301,7 +301,7 @@ def test_resource_ready_setter(ready, enum):
     resource = composite().resources.r("v1", "ConfigMap")
     resource.ready = ready
     assert resource.ready is ready
-    assert resource.desired._parent._message.ready == enum  #  ty: ignore[unresolved-attribute]
+    assert resource.desired._parent._message.ready == enum  #  ty: ignore[missing-union-attribute]
 
 
 @pytest.mark.parametrize("ready,expected", [(1, True), (2, False)])
@@ -328,7 +328,7 @@ def test_resource_ready_auto_ready():
     )
     cm = xr.resources.cm("v1", "ConfigMap")
     assert cm.ready
-    assert cm.desired._parent._message.ready == fnv1.Ready.READY_TRUE  #  ty: ignore[unresolved-attribute]
+    assert cm.desired._parent._message.ready == fnv1.Ready.READY_TRUE  #  ty: ignore[missing-union-attribute]
 
 
 @pytest.mark.parametrize("composite_auto,resource_auto", [(False, None), (True, False)])
@@ -681,7 +681,7 @@ def test_conditions_set():
 def test_condition_status_setter(status, enum):
     xr = composite()
     xr.conditions.Ready.status = status
-    assert xr.response.conditions[0]._message.status == enum  #  ty: ignore[unresolved-attribute]
+    assert xr.response.conditions[0]._message.status == enum  #  ty: ignore[missing-union-attribute]
 
 
 @pytest.mark.parametrize(
@@ -697,7 +697,7 @@ def test_condition_status_setter(status, enum):
 def test_condition_claim_setter(claim, enum):
     xr = composite()
     xr.conditions.Ready.claim = claim
-    assert xr.response.conditions[0]._message.target == enum  #  ty: ignore[unresolved-attribute]
+    assert xr.response.conditions[0]._message.target == enum  #  ty: ignore[missing-union-attribute]
 
 
 def test_condition_response_overrides_observed():
@@ -776,7 +776,7 @@ def test_result_claim_setter(claim, enum):
     xr = composite()
     result = xr.results.warning(claim=claim)
     assert result.claim is False
-    assert xr.response.results[0]._message.target == enum  #  ty: ignore[unresolved-attribute]
+    assert xr.response.results[0]._message.target == enum  #  ty: ignore[missing-union-attribute]
 
 
 def test_result_missing():

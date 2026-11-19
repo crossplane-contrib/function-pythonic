@@ -45,6 +45,8 @@ jobs:
         uses: actions/checkout@v7
       - name: Install uv
         uses: astral-sh/setup-uv@v10.3.3
+      - name: Sync venv
+        run: uv sync --locked
       - name: Ruff Format
         run: uv run ruff format --diff
 
@@ -55,6 +57,8 @@ jobs:
         uses: actions/checkout@v7
       - name: Install uv
         uses: astral-sh/setup-uv@v10.3.3
+      - name: Sync venv
+        run: uv sync --locked
       - name: Ruff Check
         run: uv run ruff check
 
@@ -65,6 +69,8 @@ jobs:
         uses: actions/checkout@v7
       - name: Install uv
         uses: astral-sh/setup-uv@v10.3.3
+      - name: Sync venv
+        run: uv sync --locked
       - name: Generate run_function protobuf
         run: uv run poe generate-protoc
       - name: Ty Check
@@ -77,6 +83,8 @@ jobs:
         uses: actions/checkout@v7
       - name: Install uv
         uses: astral-sh/setup-uv@v10.3.3
+      - name: Sync venv
+        run: uv sync --locked
       - name: Generate run_function protobuf
         run: uv run poe generate-protoc
       - name: Run Unit Tests
@@ -89,6 +97,8 @@ jobs:
         uses: actions/checkout@v7
       - name: Install uv
         uses: astral-sh/setup-uv@v10.3.3
+      - name: Sync venv
+        run: uv sync --locked
       - name: Generate run_function protobuf
         run: uv run poe generate-protoc
       - name: Set Default PyPI Project Version
