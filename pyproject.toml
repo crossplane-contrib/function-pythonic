@@ -9,7 +9,7 @@ authors = [
 ]
 requires-python = ">=3.15,<3.16"
 dependencies = [
-  "grpcio==1.85.1",
+  "grpcio==1.85.3",
   "inflect==7.6.0",
   "kr8s==0.20.15",
   "protobuf==7.36.2",
@@ -34,7 +34,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "grpcio-tools>=1.85.0",
+    "grpcio-tools==1.85.3",
     "kopf==1.45.2",
     "mypy-protobuf>=5.1.0",
     "poethepoet>=0.48.0",
@@ -44,7 +44,7 @@ dev = [
     "pytest-cov>=7.1.0",
     "ruff>=0.17.0",
     "ty>=0.0.107",
-    "types-grpcio>=1.84.0.20261021",
+    "types-grpcio>=1.85.0.20261028",
 ]
 
 [tool.uv.build-backend]
