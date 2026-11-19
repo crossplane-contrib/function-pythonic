@@ -49,7 +49,7 @@ async def test(id, xr):
         observed = None
     composition = directory / "composition.yaml"
     if composition.is_file():
-        composition = typing.cast(
+        composition: protobuf.Value = typing.cast(
             protobuf.Value, protobuf.Yaml(composition.read_text())
         )
     else:

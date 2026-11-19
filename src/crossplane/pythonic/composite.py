@@ -21,7 +21,9 @@ class ConnectionSecret:
             return composite.spec.writeConnectionSecretToRef
         if not composite._connectionSecret:
             composite._connectionSecret = protobuf.Map()
-            for key, value in composite.request.input.writeConnectionSecretToRef:
+            for key, value in cast(
+                protobuf.Value, composite.request.input.writeConnectionSecretToRef
+            ):
                 composite._connectionSecret[key] = value
         return composite._connectionSecret
 
@@ -49,9 +51,11 @@ class Connection:
         return composite._connection
 
     def __set__(
-        self, composite: BaseComposite, values: typing.Mapping | protobuf.Value
+        self,
+        composite: BaseComposite,
+        values: protobuf.MapMessage | protobuf.Value | dict[str, str],
     ) -> None:
-        connection = self.__get__(composite)
+        connection: _Connection = self.__get__(composite)
         connection()
         for entry in values:
             if isinstance(entry, str):
@@ -172,7 +176,7 @@ class BaseComposite:
         )
         self.observed: protobuf.Value = cast(protobuf.Value, observed.resource)
         self.desired: protobuf.Value = cast(protobuf.Value, desired.resource)
-        self.apiVersion: protobuf.Value = cast(protobuf.Value, self.observed.apiVersion)
+        self.apiVersion: protobuf.Value = self.observed.apiVersion
         self.kind: protobuf.Value = self.observed.kind
         self.metadata: protobuf.Value = self.observed.metadata
         self.spec: protobuf.Value = self.observed.spec
@@ -242,7 +246,9 @@ class Credentials:
         return key in self._request.credentials
 
     def __iter__(self) -> typing.Generator[tuple[str, Credential]]:
-        for key, resource in self._request.credentials:
+        for key, resource in cast(
+            typing.Generator[tuple[str, Credential]], self._request.credentials
+        ):
             yield key, self[key]
 
 
@@ -266,7 +272,9 @@ class Credential:
         return key in self._credential.credential_data.data
 
     def __iter__(self) -> typing.Generator[tuple[str, str]]:
-        for key, resource in self._credential.credential_data.data:
+        for key, resource in cast(
+            typing.Generator[tuple[str, str]], self._credential.credential_data.data
+        ):
             yield key, self[key]
 
 
@@ -295,13 +303,16 @@ class Resources:
         return key in self._composite.response.desired.resources
 
     def __iter__(self) -> typing.Generator[tuple[str, Resource]]:
-        for name, resource in self._composite.response.desired.resources:
+        for name, resource in cast(
+            typing.Generator[tuple[str, protobuf.MapMessage]],
+            self._composite.response.desired.resources,
+        ):
             yield name, self[name]
 
     def __setattr__(
         self,
         key: protobuf.TypeString,
-        resource: typing.Mapping | protobuf.Value,
+        resource: protobuf.Value | dict,
     ) -> None:
         if key in ("_composite", "_cache"):
             self.__dict__[str(key)] = resource
@@ -311,7 +322,7 @@ class Resources:
     def __setitem__(
         self,
         key: protobuf.TypeString,
-        resource: typing.Mapping | protobuf.Value,
+        resource: protobuf.Value | dict,
     ) -> None:
         self._composite.response.desired.resources[key].resource = resource
         self._cache.pop(key, None)
@@ -351,10 +362,10 @@ class Resource:
 
     def __call__(
         self,
-        kind: str | _notset = _notset,
-        apiVersion: str | _notset = _notset,
-        namespace: str | _notset = _notset,
-        name: str | _notset = _notset,
+        kind: protobuf.TypeString | _notset = _notset,
+        apiVersion: protobuf.TypeString | _notset = _notset,
+        namespace: protobuf.TypeString | _notset = _notset,
+        name: protobuf.TypeString | _notset = _notset,
     ) -> typing.Self:
         self.desired()
         if kind is not _notset:
@@ -407,7 +418,7 @@ class Resource:
         return self.desired.metadata
 
     @metadata.setter
-    def metadata(self, metadata: typing.Mapping | protobuf.Value) -> None:
+    def metadata(self, metadata: protobuf.Value | dict) -> None:
         self.desired.metadata = metadata
 
     @property
@@ -415,7 +426,7 @@ class Resource:
         return self.desired.spec
 
     @spec.setter
-    def spec(self, spec: typing.Mapping | protobuf.Value) -> None:
+    def spec(self, spec: protobuf.Value | dict) -> None:
         self.desired.spec = spec
 
     # Used by Secret:v1
@@ -424,7 +435,7 @@ class Resource:
         return self.desired.type
 
     @type.setter
-    def type(self, type: str | protobuf.Value) -> None:
+    def type(self, type: protobuf.Value | str) -> None:
         self.desired.type = type
 
     @property
@@ -432,7 +443,7 @@ class Resource:
         return self.desired.data
 
     @data.setter
-    def data(self, data: typing.Mapping | protobuf.Value) -> None:
+    def data(self, data: protobuf.Value | dict) -> None:
         self.desired.data = data
 
     @property
@@ -565,14 +576,14 @@ class Requireds:
         names: set[str] = set()
         if self._composite.crossplane_v1:
             for name, resource in self._composite.request.extra_resources:
-                names.add(name)
+                names.add(cast(str, name))
             for name, resource in self._composite.response.requirements.extra_resources:
-                names.add(name)
+                names.add(cast(str, name))
         else:
             for name, resource in self._composite.request.required_resources:
-                names.add(name)
+                names.add(cast(str, name))
             for name, resource in self._composite.response.requirements.resources:
-                names.add(name)
+                names.add(cast(str, name))
         for name in sorted(names):
             yield name, self[name]
 
@@ -603,10 +614,10 @@ class RequiredResources:
 
     def __call__(
         self,
-        kind: str | _notset = _notset,
-        apiVersion: str | _notset = _notset,
-        namespace: str | _notset = _notset,
-        name: str | _notset = _notset,
+        kind: protobuf.TypeString | _notset = _notset,
+        apiVersion: protobuf.TypeString | _notset = _notset,
+        namespace: protobuf.TypeString | _notset = _notset,
+        name: protobuf.TypeString | _notset = _notset,
         labels: typing.Mapping[str, str] | _notset = _notset,
     ) -> typing.Self:
         self._selector()
@@ -630,7 +641,7 @@ class RequiredResources:
 
     @property
     def apiVersion(self) -> protobuf.FieldMessage:
-        return self._selector.api_version
+        return cast(protobuf.FieldMessage, self._selector.api_version)
 
     @apiVersion.setter
     def apiVersion(self, apiVersion: protobuf.TypeString):
@@ -638,7 +649,7 @@ class RequiredResources:
 
     @property
     def kind(self) -> protobuf.FieldMessage:
-        return self._selector.kind
+        return cast(protobuf.FieldMessage, self._selector.kind)
 
     @kind.setter
     def kind(self, kind: protobuf.TypeString):
@@ -646,7 +657,7 @@ class RequiredResources:
 
     @property
     def namespace(self) -> protobuf.FieldMessage:
-        return self._selector.namespace
+        return cast(protobuf.FieldMessage, self._selector.namespace)
 
     @namespace.setter
     def namespace(self, namespace: protobuf.TypeString):
@@ -654,7 +665,7 @@ class RequiredResources:
 
     @property
     def matchName(self) -> protobuf.FieldMessage:
-        return self._selector.match_name
+        return cast(protobuf.FieldMessage, self._selector.match_name)
 
     @matchName.setter
     def matchName(self, name: protobuf.TypeString):
@@ -662,7 +673,7 @@ class RequiredResources:
 
     @property
     def matchLabels(self) -> protobuf.MapMessage:
-        return self._selector.match_labels.labels
+        return cast(protobuf.MapMessage, self._selector.match_labels.labels)
 
     @matchLabels.setter
     def matchLabels(
@@ -680,7 +691,9 @@ class RequiredResources:
     def __getitem__(self, ix: int) -> RequiredResource:
         resource = self._cache.get(ix)
         if not resource:
-            resource = RequiredResource(self.name, ix, self._resources.items[ix])
+            resource = RequiredResource(
+                self.name, ix, cast(protobuf.Message, self._resources.items[ix])
+            )
             self._cache[ix] = resource
         return resource
 
@@ -713,7 +726,9 @@ class RequiredResource:
         self.data: protobuf.Value = self.observed.data
         self.status: protobuf.Value = self.observed.status
         self.conditions: Conditions = Conditions(resource)
-        self.connection: protobuf.MapMessage = self.observed.connection_details
+        self.connection: protobuf.MapMessage = cast(
+            protobuf.MapMessage, resource.connection_details
+        )
 
     def __bool__(self) -> bool:
         return bool(self.observed)
@@ -753,9 +768,9 @@ class Schemas:
     def __iter__(self) -> typing.Generator[tuple[str, Schema]]:
         names: set[str] = set()
         for name, schema in self._composite.request.required_schemas:
-            names.add(name)
+            names.add(cast(str, name))
         for name, selector in self._composite.response.requirements.schemas:
-            names.add(name)
+            names.add(cast(str, name))
         for name in sorted(names):
             yield name, self[name]
 
@@ -775,7 +790,9 @@ class Schema:
         )
 
     def __call__(
-        self, kind: str | _notset = _notset, apiVersion: str | _notset = _notset
+        self,
+        kind: protobuf.TypeString | _notset = _notset,
+        apiVersion: protobuf.TypeString | _notset = _notset,
     ) -> typing.Self:
         self._selector()
         if kind is not _notset:
@@ -843,8 +860,8 @@ class Schema:
     def __contains__(self, item: protobuf.TypeString) -> bool:
         return item in self._schema
 
-    def __iter__(self) -> typing.Generator[str, protobuf.Value]:
-        yield from self._schema
+    def __iter__(self) -> typing.Generator[tuple[str, protobuf.Value]]:
+        yield from cast(typing.Generator[tuple[str, protobuf.Value]], self._schema)
 
     def __hash__(self) -> int:
         return hash(self._schema)
@@ -886,13 +903,15 @@ class Conditions:
         for type in self._types():
             yield self[type]
 
-    def _types(self):
+    def _types(self) -> list[str]:
         types = set()
         if self._response is not None:
-            for condition in self._response.conditions:
+            for condition in cast(protobuf.RepeatedMessage, self._response.conditions):
                 if condition.type:
                     types.add(str(condition.type))
-        for condition in self._observed.resource.status.conditions:
+        for condition in cast(
+            protobuf.Value, self._observed.resource.status.conditions
+        ):
             if condition.type:
                 types.add(str(condition.type))
         return sorted(types)
@@ -981,7 +1000,9 @@ class Condition(protobuf.ProtobufValue):
 
     @property
     def lastTransitionTime(self) -> datetime.datetime | None:
-        for observed in self._conditions._observed.resource.status.conditions:
+        for observed in cast(
+            protobuf.Value, self._conditions._observed.resource.status.conditions
+        ):
             if observed.type == self.type:
                 time = observed.lastTransitionTime
                 if time:
@@ -1008,13 +1029,17 @@ class Condition(protobuf.ProtobufValue):
 
     def _get_condition(self, ensure: bool = False) -> protobuf.Message | None:
         if self._conditions._response is not None:
-            for condition in self._conditions._response.conditions:
+            for condition in cast(
+                protobuf.RepeatedMessage, self._conditions._response.conditions
+            ):
                 if condition.type == self.type:
-                    return condition
+                    return cast(protobuf.Message, condition)
         if not ensure:
-            for observed in self._conditions._observed.resource.status.conditions:
+            for observed in cast(
+                protobuf.Value, self._conditions._observed.resource.status.conditions
+            ):
                 if observed.type == self.type:
-                    return observed
+                    return cast(protobuf.Message, observed)
         return None
 
     def _ensure_condition(self) -> protobuf.Message:
@@ -1025,7 +1050,7 @@ class Condition(protobuf.ProtobufValue):
             raise ValueError("Condition is read only")
         condition = fnv1.Condition()
         condition.type = self.type
-        self._conditions._response.conditions.append(condition)
+        self._conditions._response.conditions.append(cast(protobuf.Message, condition))
         return cast(protobuf.Message, self._conditions._response.conditions[-1])
 
 
@@ -1042,7 +1067,7 @@ class Results:
         claim: bool | protobuf.Value | None | _notset = _notset,
     ) -> Result:
         self._results.append()
-        result = Result(self._results[-1])
+        result = Result(cast(protobuf.Message, self._results[-1]))
         result.info = True
         if reason is not _notset:
             result.reason = reason
@@ -1059,7 +1084,7 @@ class Results:
         claim: bool | protobuf.Value | None | _notset = _notset,
     ) -> Result:
         self._results.append()
-        result = Result(self._results[-1])
+        result = Result(cast(protobuf.Message, self._results[-1]))
         result.warning = True
         if reason is not _notset:
             result.reason = reason
@@ -1076,7 +1101,7 @@ class Results:
         claim: bool | protobuf.Value | None | _notset = _notset,
     ) -> Result:
         self._results.append()
-        result = Result(self._results[-1])
+        result = Result(cast(protobuf.Message, self._results[-1]))
         result.fatal = True
         if reason is not _notset:
             result.reason = reason
@@ -1095,7 +1120,7 @@ class Results:
     def __getitem__(self, key: int) -> Result:
         if key >= len(self._results):
             return Result()
-        return Result(self._results[key])
+        return Result(cast(protobuf.Message, self._results[key]))
 
     def __iter__(self) -> typing.Generator[Result]:
         for ix in range(len(self._results)):
@@ -1227,7 +1252,7 @@ class _Connection:
     def __getitem__(self, key: protobuf.TypeString) -> protobuf.FieldMessage:
         return cast(
             protobuf.FieldMessage,
-            self._composite.response.desired.composite.connection_details[key],
+            self._composite.response.desired.composite.connection_details[str(key)],
         )
 
     def __bool__(self) -> bool:
@@ -1240,7 +1265,10 @@ class _Connection:
         return key in self._composite.response.desired.composite.connection_details
 
     def __iter__(self) -> typing.Generator[tuple[str, protobuf.FieldMessage]]:
-        yield from self._composite.response.desired.composite.connection_details
+        yield from cast(
+            typing.Generator[tuple[str, protobuf.FieldMessage]],
+            self._composite.response.desired.composite.connection_details,
+        )
 
     def __str__(self) -> str:
         return format(self)
@@ -1258,21 +1286,13 @@ class _Connection:
         for key, value in kwargs.items():
             self[key] = value
 
-    def __setattr__(
-        self,
-        key: protobuf.TypeString,
-        value: protobuf.TypeString,
-    ) -> None:
+    def __setattr__(self, key: protobuf.TypeKey, value: protobuf.TypeString) -> None:
         if key == "_composite":
             self.__dict__[str(key)] = value
         else:
             self[key] = value
 
-    def __setitem__(
-        self,
-        key: protobuf.TypeString,
-        value: protobuf.TypeString,
-    ) -> None:
+    def __setitem__(self, key: protobuf.TypeKey, value: protobuf.TypeItem) -> None:
         if not isinstance(value, str):
             if value is None:
                 return

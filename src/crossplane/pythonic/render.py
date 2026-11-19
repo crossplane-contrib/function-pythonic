@@ -508,8 +508,8 @@ class Command(command.Command):
                 # Fetch the required resources requested.
                 for name, selector in requirements.resources:
                     await self.set_required(
-                        name,
-                        selector,
+                        cast(str, name),
+                        cast(protobuf.Message, selector),
                         cast(protobuf.MapMessage, request.required_resources),
                         resources,
                         api,
@@ -518,8 +518,8 @@ class Command(command.Command):
                 request.extra_resources()
                 for name, selector in requirements.extra_resources:
                     await self.set_required(
-                        name,
-                        selector,
+                        cast(str, name),
+                        cast(protobuf.Message, selector),
                         cast(protobuf.MapMessage, request.extra_resources),
                         resources,
                         api,
@@ -528,8 +528,8 @@ class Command(command.Command):
                 request.required_schemas()
                 for name, selector in requirements.schemas:
                     await self.set_schema(
-                        name,
-                        selector,
+                        cast(str, name),
+                        cast(protobuf.Value, selector),
                         cast(protobuf.MapMessage, request.required_schemas),
                         schemas,
                         api,
@@ -547,7 +547,7 @@ class Command(command.Command):
                 # Copy the response context to the request context to use in subsequent steps.
                 request.context = response.context
                 # All done if there is a fatal result.
-                for result in response.results:
+                for result in cast(protobuf.RepeatedMessage, response.results):
                     if result.severity == fnv1.Severity.SEVERITY_FATAL:
                         fatal = True
                         break
@@ -565,27 +565,30 @@ class Command(command.Command):
                 cast(protobuf.Message, response.desired.composite),
                 cast(protobuf.Message, request.desired.composite),
             )
-            for name, resource in response.desired.resources:
+            for name, resource in cast(protobuf.MapMessage, response.desired.resources):
                 self.copy_resource(
-                    resource, cast(protobuf.Message, request.desired.resources[name])
+                    cast(protobuf.Message, resource),
+                    cast(protobuf.Message, request.desired.resources[name]),
                 )
 
             # Collect the step's returned conditions.
-            for condition in response.conditions:
+            for condition in cast(protobuf.RepeatedMessage, response.conditions):
                 if condition.type not in ("Ready", "Synced", "Healthy"):
                     conditions[protobuf.append] = self.create_condition(
-                        condition.type,
-                        condition.status,
-                        condition.reason,
-                        condition.message,
+                        str(condition.type),
+                        cast(protobuf.FieldMessage, condition.status),
+                        str(condition.reason),
+                        str(condition.message),
                     )
             # Collect the step's returned results.
-            for result in response.results:
+            for result in cast(protobuf.RepeatedMessage, response.results):
                 ix = len(results)
                 results[ix].apiVersion = "render.crossplane.io/v1beta1"
                 results[ix].kind = "Result"
                 results[ix].step = step.step
-                results[ix].severity = fnv1.Severity.Name(result.severity._value)
+                results[ix].severity = fnv1.Severity.Name(
+                    cast(fnv1.Severity.ValueType, result.severity._value)
+                )
                 if result.reason:
                     results[ix].reason = result.reason
                 if result.message:
@@ -601,7 +604,7 @@ class Command(command.Command):
         prefix = composite.metadata.labels["crossplane.io/composite"]
         if not prefix:
             prefix = composite.metadata.name
-        for name, resource in request.desired.resources:
+        for name, resource in cast(protobuf.MapMessage, request.desired.resources):
             if resource.ready == fnv1.Ready.READY_TRUE:
                 ready = True
             elif resource.ready == fnv1.Ready.READY_FALSE:
@@ -654,7 +657,7 @@ class Command(command.Command):
 
         # Format the returned desired composite
         composite = protobuf.Map()
-        for name, value in request.desired.composite.resource:
+        for name, value in cast(protobuf.Value, request.desired.composite.resource):
             composite[name] = value
         composite.apiVersion = request.observed.composite.resource.apiVersion
         composite.kind = request.observed.composite.resource.kind
@@ -695,7 +698,7 @@ class Command(command.Command):
             ),
         )
         if composite_observeds:
-            for name, resource in request.observed.resources:
+            for name, resource in cast(protobuf.MapMessage, request.observed.resources):
                 response.observed[name] = resource.resource
         return response
 
@@ -753,15 +756,23 @@ class Command(command.Command):
             ):
                 if selector.match_name == resource.metadata.name:
                     await self.set_resource(
-                        resource, items[protobuf.append], resources, api
+                        resource,
+                        cast(protobuf.Value, items[protobuf.append]),
+                        resources,
+                        api,
                     )
                 elif selector.match_labels.labels:
-                    for key, value in selector.match_labels.labels:
+                    for key, value in cast(
+                        protobuf.MapMessage, selector.match_labels.labels
+                    ):
                         if value != resource.metadata.labels[key]:
                             break
                     else:
                         await self.set_resource(
-                            resource, items[protobuf.append], resources, api
+                            resource,
+                            cast(protobuf.Value, items[protobuf.append]),
+                            resources,
+                            api,
                         )
         if not len(items) and api:
             if len(selector.match_name):
@@ -774,7 +785,10 @@ class Command(command.Command):
                 )
                 if resource:
                     await self.set_resource(
-                        resource, items[protobuf.append], resources, api
+                        resource,
+                        cast(protobuf.Value, items[protobuf.append]),
+                        resources,
+                        api,
                     )
             elif len(selector.match_labels.labels):
                 for resource in await self.kr8s_list(
@@ -785,7 +799,10 @@ class Command(command.Command):
                     cast(protobuf.MapMessage, selector.match_labels.labels),
                 ):
                     await self.set_resource(
-                        resource, items[protobuf.append], resources, api
+                        resource,
+                        cast(protobuf.Value, items[protobuf.append]),
+                        resources,
+                        api,
                     )
 
     def requirement_selector(self, requirement: protobuf.Value) -> protobuf.Message:
@@ -856,7 +873,7 @@ class Command(command.Command):
         if not name:
             return
         name = str(name)
-        schema = schemas[name].openapi_v3
+        schema: protobuf.Value = cast(protobuf.Value, schemas[name].openapi_v3)
         schema()  # Force this to get created
         gvk = protobuf.Map(kind=selector.kind)
         version = str(selector.api_version)
@@ -948,7 +965,7 @@ class Command(command.Command):
     ) -> None:
         destination.resource = source.resource
         destination.connection_details()
-        for key, value in source.connection_details:
+        for key, value in cast(protobuf.MapMessage, source.connection_details):
             destination.connection_details[key] = value
         destination.ready = source.ready
 

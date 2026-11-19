@@ -405,11 +405,11 @@ def test_invalid_keys():
     with pytest.raises(ValueError):
         del values.map[0]
     with pytest.raises(TypeError):
-        values[1.5]
+        values[1.5]  # ty: ignore[invalid-argument-type]
     with pytest.raises(TypeError):
-        values[None] = 1
+        values[None] = 1  # ty: ignore[invalid-assignment]
     with pytest.raises(ValueError):
-        values.a = object()
+        values.a = object()  # ty: ignore[invalid-assignment]
     values.unknown.x = 1
     del protobuf.Unknown().a
     assert values[protobuf.Map(k="str").k] == "x"

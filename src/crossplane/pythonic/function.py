@@ -92,7 +92,7 @@ class FunctionRunner(grpcv1.FunctionRunnerServiceServicer):
 
         # Ideally this is something the Function API provides
         if "step" in request.input:
-            step = request.input["step"]
+            step = str(request.input["step"])
         else:
             step = str(hash(composite))
 
