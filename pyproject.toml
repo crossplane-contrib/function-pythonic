@@ -34,7 +34,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "grpcio-tools>=1.85.0",
+    "grpcio-tools==1.85.3",
     "kopf==1.45.2",
     "mypy-protobuf>=5.1.0",
     "poethepoet>=0.48.0",
@@ -44,7 +44,7 @@ dev = [
     "pytest-cov>=7.1.0",
     "ruff>=0.17.0",
     "ty>=0.0.107",
-    "types-grpcio>=1.84.0.20261021",
+    "types-grpcio>=1.85.0.20261028",
 ]
 
 [tool.uv.build-backend]
