@@ -34,7 +34,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "grpcio-tools==1.85.3",
+    "grpcio-tools==1.85.4",
     "kopf==1.45.2",
     "mypy-protobuf>=5.1.0",
     "poethepoet>=0.48.0",
